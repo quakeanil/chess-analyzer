@@ -1,6 +1,6 @@
 """
 HTML Dashboard Generator for Chess Diagnostic Tool
-Generates a standalone interactive HTML dashboard with embedded Chessboard.js
+Generates a standalone interactive HTML dashboard with embedded Chessboard.js & Coach Recommendations
 """
 import json
 import os
@@ -14,7 +14,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess.com Diagnostics - __USERNAME__</title>
+    <title>Chess.com Diagnostics & Coach - __USERNAME__</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -38,10 +38,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <span class="text-3xl">♟️</span>
             <div>
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    Chess Diagnostic Copilot
+                    Chess Diagnostic Copilot & AI Coach
                     <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded font-mono">__USERNAME__</span>
                 </h1>
-                <p class="text-xs text-slate-400">Deep Diagnostic & Early-Game Blunder Analysis (__TOTAL_GAMES__ games)</p>
+                <p class="text-xs text-slate-400">Move-by-Move Mistake Diagnosis & Better Move Recommendations (__TOTAL_GAMES__ games)</p>
             </div>
         </div>
         <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
@@ -61,9 +61,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6">
         <nav class="flex space-x-8 text-sm">
             <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">Overview & Leaks</button>
-            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Early Disaster Replayer (<=15 moves)</button>
+            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Early Disaster & Better Move Replayer</button>
             <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Interactive Blunder Trainer</button>
-            <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Opening Action Blueprint</button>
+            <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Coach's Golden Rules & Repertoire</button>
         </nav>
     </div>
 
@@ -99,11 +99,11 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <!-- Priority Diagnosis Banner -->
             <div class="bg-sky-950/40 border border-sky-700/50 rounded-xl p-5">
                 <h3 class="text-base font-bold text-sky-300 flex items-center gap-2">
-                    <span>💡</span> Root Cause Diagnosis
+                    <span>💡</span> Root Cause Diagnosis & Coach Verdict
                 </h3>
                 <p class="text-sm text-slate-300 mt-2 leading-relaxed">
                     Your tactical strength is rated at <strong>1,736</strong>, but your blitz rating is around <strong>1,260</strong>. 
-                    The data reveals you are not being outplayed in the endgame; you are getting caught in <strong>4 specific early-game trap patterns (Moves 3–7)</strong> that lead to fast resignations. Eliminating these 4 leaks will immediately push your rating past 1,400.
+                    The diagnostic confirms you are not being outplayed in the endgame; you are getting caught in <strong>4 specific early-game trap patterns (Moves 3–7)</strong> that lead to fast resignations. Eliminating these 4 mistakes using the recommendations below will easily lift your rating past 1,400.
                 </p>
             </div>
 
@@ -153,7 +153,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             </div>
         </section>
 
-        <!-- TAB 2: EARLY DISASTER REPLAYER -->
+        <!-- TAB 2: EARLY DISASTER REPLAYER WITH COACH ADVICE -->
         <section id="view-disasters" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Left: Interactive Board -->
@@ -171,22 +171,54 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     <div id="replay-status" class="text-xs text-slate-400 mt-2 font-mono">Move 0 / 0</div>
                 </div>
 
-                <!-- Right: Game Selector & Move List -->
-                <div class="lg:col-span-7 bg-slate-800/80 rounded-xl border border-slate-700 p-5 flex flex-col">
-                    <div class="mb-4">
+                <!-- Right: Game Selector & Coach Advice Card -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Select Lost Game (<=15 moves):</label>
                         <select id="game-select" onchange="loadSelectedGame(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500"></select>
+
+                        <div id="game-meta-card" class="bg-slate-900/70 p-3.5 rounded-lg border border-slate-700 mt-3 text-xs space-y-1">
+                            <div><strong>Opening:</strong> <span id="meta-opening" class="text-sky-400"></span></div>
+                            <div><strong>Opponent:</strong> <span id="meta-opp" class="text-slate-300"></span> | <strong>Result:</strong> <span id="meta-result" class="text-rose-400 font-semibold"></span></div>
+                            <div><strong>Chess.com Link:</strong> <a id="meta-link" href="#" target="_blank" class="text-sky-400 underline">Open on Chess.com ↗</a></div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to jump):</label>
+                            <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-32 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
+                        </div>
                     </div>
 
-                    <div id="game-meta-card" class="bg-slate-900/70 p-4 rounded-lg border border-slate-700 mb-4 text-xs space-y-1">
-                        <div><strong>Opening:</strong> <span id="meta-opening" class="text-sky-400"></span></div>
-                        <div><strong>Opponent:</strong> <span id="meta-opp" class="text-slate-300"></span> | <strong>Result:</strong> <span id="meta-result" class="text-rose-400 font-semibold"></span></div>
-                        <div><strong>Chess.com Link:</strong> <a id="meta-link" href="#" target="_blank" class="text-sky-400 underline">Open on Chess.com ↗</a></div>
-                    </div>
+                    <!-- COACH RECOMMENDATIONS BOX -->
+                    <div id="coach-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950/40 rounded-xl border-2 border-amber-500/40 p-5 space-y-3 shadow-xl">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                                <span>🎯</span> Coach Diagnostic & Better Move
+                            </h3>
+                            <span id="coach-ply-tag" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-mono">Move Diagnosis</span>
+                        </div>
 
-                    <div class="flex-1">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to jump):</label>
-                        <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-48 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div class="bg-rose-950/40 border border-rose-800/60 p-3 rounded-lg">
+                                <div class="font-bold text-rose-400 uppercase text-[11px] mb-1">🔴 What You Played</div>
+                                <div id="coach-played-move" class="font-mono text-sm text-slate-100 font-bold"></div>
+                            </div>
+                            <div class="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg">
+                                <div class="font-bold text-emerald-400 uppercase text-[11px] mb-1">🟢 What You Should Play Instead</div>
+                                <div id="coach-better-move" class="font-mono text-sm text-emerald-300 font-bold"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/80 border border-amber-500/30 p-3.5 rounded-lg text-xs space-y-2">
+                            <div>
+                                <strong class="text-rose-300 font-bold uppercase text-[11px] tracking-wide">⚠️ NEVER DO THIS RULE:</strong>
+                                <p id="coach-never-rule" class="text-slate-200 mt-0.5 font-medium"></p>
+                            </div>
+                            <div class="border-t border-slate-800 pt-2">
+                                <strong class="text-sky-300 font-bold uppercase text-[11px] tracking-wide">💡 WHY THIS WORKS (MASTER INSIGHT):</strong>
+                                <p id="coach-explanation" class="text-slate-300 mt-0.5 leading-relaxed"></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -210,7 +242,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     <div class="md:col-span-6 space-y-4">
                         <div id="drill-feedback" class="p-4 rounded-lg bg-slate-900 border border-slate-700 text-sm">
                             <div class="font-semibold text-slate-300">Your Turn: Make your move on the board</div>
-                            <div class="text-xs text-slate-400 mt-1">Drag the piece to play your move.</div>
+                            <div class="text-xs text-slate-400 mt-1">Drag the piece to find the winning move.</div>
                         </div>
 
                         <div class="space-y-2">
@@ -229,8 +261,34 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             </div>
         </section>
 
-        <!-- TAB 4: REPERTOIRE ACTION BLUEPRINT -->
+        <!-- TAB 4: COACH'S GOLDEN RULES & REPERTOIRE -->
         <section id="view-repertoire" class="hidden space-y-6">
+            <!-- 5 Golden "NEVER DO THAT" Rules -->
+            <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6">
+                <h3 class="text-lg font-bold text-rose-400 flex items-center gap-2 mb-4">
+                    <span>🛑</span> Top 5 "NEVER DO THAT" Rules for 1200 → 1500 Players
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                    <div class="bg-slate-900/80 p-4 rounded-lg border border-rose-900/40">
+                        <strong class="text-rose-400 text-sm block mb-1">1. Never block queen checks with your Queen when b2 is hanging</strong>
+                        <p>In the Englund Gambit (1.d4 e5 2.dxe5 Nc6 3.Nf3 Qe7 4.Bf4 Qb4+), playing <strong>5.Qd2??</strong> loses immediately to 5...Qxb2! Play <strong>5.Bd2!</strong> instead, followed by <strong>6.Nc3!</strong>.</p>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-lg border border-rose-900/40">
+                        <strong class="text-rose-400 text-sm block mb-1">2. Never trap your light-squared bishop in the Scandinavian</strong>
+                        <p>When White plays 2.e5 against your 1...d5, NEVER play 2...e6! Always play <strong>2...Bf5!</strong> first, bringing your bishop outside the pawn chain before locking it with e6.</p>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-lg border border-rose-900/40">
+                        <strong class="text-rose-400 text-sm block mb-1">3. Never let the London player set up without fighting for the center</strong>
+                        <p>Against 1.d4 d5 2.Bf4, NEVER play passive setup moves like 2...e6. Strike immediately with <strong>2...c5!</strong> and <strong>4...Qb6!</strong> attacking b2.</p>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-lg border border-rose-900/40">
+                        <strong class="text-rose-400 text-sm block mb-1">4. Never play passive d4 + Nf3 + e3 without c4 or Bf4</strong>
+                        <p>Playing 1.d4 followed by Nf3 and e3 with your dark bishop trapped on c1 gives Black full control of the game. Always play <strong>2.c4! (Queen's Gambit)</strong> or <strong>2.Bf4! (London)</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Repertoire Blueprints -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- White Blueprint -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6 space-y-4">
@@ -358,6 +416,16 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('meta-opp').innerText = `${g.opp_name} (${g.opp_rating || '?'})`;
             document.getElementById('meta-result').innerText = `${g.result} in ${g.moves_count} moves`;
             document.getElementById('meta-link').href = g.url;
+
+            // Load Coach Advice Card
+            if (g.coach_advice) {
+                document.getElementById('coach-card').classList.remove('hidden');
+                document.getElementById('coach-played-move').innerText = g.coach_advice.played_move;
+                document.getElementById('coach-better-move').innerText = g.coach_advice.better_move;
+                document.getElementById('coach-never-rule').innerText = g.coach_advice.never_rule;
+                document.getElementById('coach-explanation').innerText = g.coach_advice.explanation;
+                document.getElementById('coach-ply-tag').innerText = `Critical Move: Move ${g.coach_advice.move_num}`;
+            }
 
             currentFens = g.fens;
             currentPly = 0;
