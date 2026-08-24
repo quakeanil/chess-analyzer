@@ -1,6 +1,5 @@
 """
-HTML Dashboard Generator for Chess Diagnostic Tool
-Generates a standalone interactive HTML dashboard with embedded Chessboard.js & Coach Recommendations
+HTML Dashboard & Full Opening Trainer Generator for Chess Diagnostic Tool
 """
 import json
 import os
@@ -9,12 +8,24 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     stats_json = json.dumps(analysis_data)
     user_stats_json = json.dumps(user_stats)
     
+    # Load top openings json if exists
+    top_openings_file = os.path.join(os.path.dirname(output_path), "data", "top_openings.json")
+    top_openings_data = {}
+    if os.path.exists(top_openings_file):
+        try:
+            with open(top_openings_file, "r", encoding="utf-8") as f:
+                top_openings_data = json.load(f)
+        except Exception:
+            pass
+            
+    top_openings_json = json.dumps(top_openings_data)
+    
     html_template = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess.com Diagnostics & Coach - __USERNAME__</title>
+    <title>Chess.com Diagnostics & Opening Trainer - __USERNAME__</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -28,6 +39,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         .board-container { max-width: 420px; width: 100%; margin: 0 auto; }
         .badge-loss { background-color: #ef444420; color: #ef4444; border: 1px solid #ef444450; }
         .badge-win { background-color: #22c55e20; color: #22c55e; border: 1px solid #22c55e50; }
+        .trainer-card.active { border-color: #38bdf8; background-color: #0369a120; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -38,10 +50,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <span class="text-3xl">♟️</span>
             <div>
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    Chess Diagnostic Copilot & AI Coach
+                    Chess Diagnostic Copilot & Opening Trainer
                     <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded font-mono">__USERNAME__</span>
                 </h1>
-                <p class="text-xs text-slate-400">Move-by-Move Mistake Diagnosis & Better Move Recommendations (__TOTAL_GAMES__ games)</p>
+                <p class="text-xs text-slate-400">Move-by-Move Opening Diagnosis, Top 10 Analytics & Interactive Drills</p>
             </div>
         </div>
         <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
@@ -60,9 +72,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Navigation Tabs -->
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6">
         <nav class="flex space-x-8 text-sm">
-            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">Overview & Leaks</button>
-            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Early Disaster & Better Move Replayer</button>
-            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Interactive Blunder Trainer</button>
+            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">Top 10 Win/Loss Openings</button>
+            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎯 Interactive Opening Trainer</button>
+            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Early Disaster Replayer (<=15 moves)</button>
             <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">Coach's Golden Rules & Repertoire</button>
         </nav>
     </div>
@@ -70,7 +82,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6">
 
-        <!-- TAB 1: OVERVIEW & LEAKS -->
+        <!-- TAB 1: TOP 10 WINNING & LOSING OPENINGS -->
         <section id="view-overview" class="space-y-6">
             <!-- Top Metric Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -96,64 +108,161 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 </div>
             </div>
 
-            <!-- Priority Diagnosis Banner -->
-            <div class="bg-sky-950/40 border border-sky-700/50 rounded-xl p-5">
-                <h3 class="text-base font-bold text-sky-300 flex items-center gap-2">
-                    <span>💡</span> Root Cause Diagnosis & Coach Verdict
+            <!-- Queen's Pawn Breakdown Box -->
+            <div class="bg-amber-950/40 border border-amber-600/50 rounded-xl p-5">
+                <h3 class="text-base font-bold text-amber-300 flex items-center gap-2">
+                    <span>👑</span> Why You Are Losing With Queen's Pawn (1.d4) as White: The Vital Distinction
                 </h3>
                 <p class="text-sm text-slate-300 mt-2 leading-relaxed">
-                    Your tactical strength is rated at <strong>1,736</strong>, but your blitz rating is around <strong>1,260</strong>. 
-                    The diagnostic confirms you are not being outplayed in the endgame; you are getting caught in <strong>4 specific early-game trap patterns (Moves 3–7)</strong> that lead to fast resignations. Eliminating these 4 mistakes using the recommendations below will easily lift your rating past 1,400.
+                    1.d4 itself is one of the strongest openings in chess. However, your data reveals a massive contrast:
                 </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-xs">
+                    <div class="bg-emerald-950/40 border border-emerald-700/60 p-3 rounded-lg">
+                        <strong class="text-emerald-400 text-sm block mb-1">🟢 When you play ACTIVE d4 (2.Bf4 London / Horwitz):</strong>
+                        <p class="text-slate-200">You score <strong>80% to 100% win rates</strong>! Your pieces are active and king is safe.</p>
+                    </div>
+                    <div class="bg-rose-950/40 border border-rose-700/60 p-3 rounded-lg">
+                        <strong class="text-rose-400 text-sm block mb-1">🔴 When you play PASSIVE d4 (2.Nf3 & 3.e3 Zukertort):</strong>
+                        <p class="text-slate-200">Your loss rate jumps to <strong>69% – 80%</strong>! The bishop gets locked on c1 and Black attacks first.</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Worst Openings Tables Grid -->
+            <!-- TOP 10 TABLES GRID -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- White Openings -->
+                <!-- White Top 10 Winning -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
-                    <h3 class="text-base font-bold text-white mb-3 flex items-center justify-between">
-                        <span>⚪ As White - Worst Leak Openings</span>
+                    <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center justify-between">
+                        <span>🏆 Top 10 WINNING Openings as White</span>
                         <span class="text-xs text-slate-400">Min 5 games</span>
                     </h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs text-left text-slate-300">
                             <thead class="text-slate-400 bg-slate-900/60 uppercase">
                                 <tr>
-                                    <th class="py-2.5 px-3">Opening</th>
-                                    <th class="py-2.5 px-2 text-center">Games</th>
-                                    <th class="py-2.5 px-2 text-center">Loss %</th>
-                                    <th class="py-2.5 px-2 text-center">Win %</th>
+                                    <th class="py-2 px-3">Opening</th>
+                                    <th class="py-2 px-2 text-center">Games</th>
+                                    <th class="py-2 px-2 text-center">Win %</th>
+                                    <th class="py-2 px-2 text-center">Loss %</th>
                                 </tr>
                             </thead>
-                            <tbody id="white-openings-tbody" class="divide-y divide-slate-700/50"></tbody>
+                            <tbody id="white-win-tbody" class="divide-y divide-slate-700/50"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Black Openings -->
+                <!-- White Top 10 Losing -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
-                    <h3 class="text-base font-bold text-white mb-3 flex items-center justify-between">
-                        <span>⚫ As Black - Worst Leak Openings</span>
+                    <h3 class="text-sm font-bold text-rose-400 mb-3 flex items-center justify-between">
+                        <span>⚠️ Top 10 LOSING Openings as White</span>
                         <span class="text-xs text-slate-400">Min 5 games</span>
                     </h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs text-left text-slate-300">
                             <thead class="text-slate-400 bg-slate-900/60 uppercase">
                                 <tr>
-                                    <th class="py-2.5 px-3">Opening</th>
-                                    <th class="py-2.5 px-2 text-center">Games</th>
-                                    <th class="py-2.5 px-2 text-center">Loss %</th>
-                                    <th class="py-2.5 px-2 text-center">Win %</th>
+                                    <th class="py-2 px-3">Opening</th>
+                                    <th class="py-2 px-2 text-center">Games</th>
+                                    <th class="py-2 px-2 text-center">Loss %</th>
+                                    <th class="py-2 px-2 text-center">Win %</th>
                                 </tr>
                             </thead>
-                            <tbody id="black-openings-tbody" class="divide-y divide-slate-700/50"></tbody>
+                            <tbody id="white-loss-tbody" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Black Top 10 Winning -->
+                <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
+                    <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center justify-between">
+                        <span>🏆 Top 10 WINNING Openings as Black</span>
+                        <span class="text-xs text-slate-400">Min 5 games</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-300">
+                            <thead class="text-slate-400 bg-slate-900/60 uppercase">
+                                <tr>
+                                    <th class="py-2 px-3">Opening</th>
+                                    <th class="py-2 px-2 text-center">Games</th>
+                                    <th class="py-2 px-2 text-center">Win %</th>
+                                    <th class="py-2 px-2 text-center">Loss %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="black-win-tbody" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Black Top 10 Losing -->
+                <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
+                    <h3 class="text-sm font-bold text-rose-400 mb-3 flex items-center justify-between">
+                        <span>⚠️ Top 10 LOSING Openings as Black</span>
+                        <span class="text-xs text-slate-400">Min 5 games</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-300">
+                            <thead class="text-slate-400 bg-slate-900/60 uppercase">
+                                <tr>
+                                    <th class="py-2 px-3">Opening</th>
+                                    <th class="py-2 px-2 text-center">Games</th>
+                                    <th class="py-2 px-2 text-center">Loss %</th>
+                                    <th class="py-2 px-2 text-center">Win %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="black-loss-tbody" class="divide-y divide-slate-700/50"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 2: EARLY DISASTER REPLAYER WITH COACH ADVICE -->
+        <!-- TAB 2: INTERACTIVE OPENING TRAINER -->
+        <section id="view-trainer" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Board & Move Controls -->
+                <div class="lg:col-span-6 flex flex-col items-center">
+                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700">
+                        <div id="trainer-board" style="width: 100%"></div>
+                    </div>
+                    <!-- Feedback & Controls -->
+                    <div class="w-full max-w-[420px] mt-4 space-y-3">
+                        <div id="trainer-feedback" class="p-4 rounded-lg bg-slate-900 border border-slate-700 text-sm">
+                            <div class="font-semibold text-slate-300" id="trainer-prompt">Select an opening drill to begin!</div>
+                            <div class="text-xs text-slate-400 mt-1" id="trainer-subtext">Play the correct move on the board.</div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                            <span id="trainer-step-indicator">Move: 0 / 0</span>
+                            <div class="space-x-2">
+                                <button onclick="resetCurrentDrill()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded">🔄 Reset Drill</button>
+                                <button onclick="showDrillHint()" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded">💡 Hint</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Drill Selector List -->
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5 flex flex-col h-full">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <span>📚</span> Select Repertoire Drill
+                            </h3>
+                            <div class="flex gap-1 text-xs">
+                                <button onclick="filterDrills('all')" class="px-2 py-1 bg-slate-700 rounded text-white" id="filter-all">All</button>
+                                <button onclick="filterDrills('white_fix')" class="px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300" id="filter-white_fix">⚪ White Fixes</button>
+                                <button onclick="filterDrills('black_fix')" class="px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300" id="filter-black_fix">⚫ Black Fixes</button>
+                                <button onclick="filterDrills('winning')" class="px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300" id="filter-winning">🏆 Master Lines</button>
+                            </div>
+                        </div>
+
+                        <div id="drills-list-container" class="space-y-2 max-h-[520px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: EARLY DISASTER REPLAYER -->
         <section id="view-disasters" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Left: Interactive Board -->
@@ -218,43 +327,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                                 <strong class="text-sky-300 font-bold uppercase text-[11px] tracking-wide">💡 WHY THIS WORKS (MASTER INSIGHT):</strong>
                                 <p id="coach-explanation" class="text-slate-300 mt-0.5 leading-relaxed"></p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: BLUNDER TRAINER -->
-        <section id="view-trainer" class="hidden space-y-6">
-            <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6 max-w-4xl mx-auto">
-                <div class="text-center mb-6">
-                    <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">Interactive Drill</span>
-                    <h2 class="text-2xl font-bold text-white mt-1" id="drill-title">Englund Gambit: Refuting the Move 5 Trap</h2>
-                    <p class="text-sm text-slate-300 mt-2" id="drill-desc">Opponent just played <strong>4...Qb4+</strong> attacking your King and Bishop on f4. What is White's best response?</p>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                    <div class="md:col-span-6 flex flex-col items-center">
-                        <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700">
-                            <div id="drill-board" style="width: 100%"></div>
-                        </div>
-                    </div>
-                    <div class="md:col-span-6 space-y-4">
-                        <div id="drill-feedback" class="p-4 rounded-lg bg-slate-900 border border-slate-700 text-sm">
-                            <div class="font-semibold text-slate-300">Your Turn: Make your move on the board</div>
-                            <div class="text-xs text-slate-400 mt-1">Drag the piece to find the winning move.</div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <button onclick="loadDrill(0)" class="w-full text-left p-3 rounded bg-slate-900 hover:bg-slate-700/50 border border-slate-700 text-xs">
-                                <strong>Drill 1:</strong> White vs Englund Gambit (4...Qb4+)
-                            </button>
-                            <button onclick="loadDrill(1)" class="w-full text-left p-3 rounded bg-slate-900 hover:bg-slate-700/50 border border-slate-700 text-xs">
-                                <strong>Drill 2:</strong> Black vs Scandinavian 2.e5
-                            </button>
-                            <button onclick="loadDrill(2)" class="w-full text-left p-3 rounded bg-slate-900 hover:bg-slate-700/50 border border-slate-700 text-xs">
-                                <strong>Drill 3:</strong> Black vs London System (2.Bf4)
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -333,6 +405,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <script>
         const analysisData = __ANALYSIS_DATA__;
         const userStats = __USER_STATS__;
+        const topOpenings = __TOP_OPENINGS__;
 
         // Populate header stats
         if (userStats && userStats.chess_blitz) {
@@ -345,33 +418,51 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('tactics-rating').innerText = userStats.tactics.highest.rating;
         }
 
-        // Populate Openings Tables
-        function renderTables() {
-            const whiteBody = document.getElementById('white-openings-tbody');
-            whiteBody.innerHTML = analysisData.white_openings.slice(0, 10).map(o => `
+        // Render Top 10 Tables
+        function renderTopTables() {
+            if (!topOpenings.white_winning) return;
+
+            document.getElementById('white-win-tbody').innerHTML = topOpenings.white_winning.map(o => `
                 <tr class="hover:bg-slate-700/30">
-                    <td class="py-2 px-3 font-medium text-slate-200">${o.opening}</td>
-                    <td class="py-2 px-2 text-center">${o.games}</td>
-                    <td class="py-2 px-2 text-center text-rose-400 font-bold">${o.loss_rate}%</td>
-                    <td class="py-2 px-2 text-center text-emerald-400 font-semibold">${o.win_rate}%</td>
+                    <td class="py-1.5 px-3 font-medium text-slate-200">${o.op}</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.total}</td>
+                    <td class="py-1.5 px-2 text-center text-emerald-400 font-bold">${o.win_rate}%</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.loss_rate}%</td>
                 </tr>
             `).join('');
 
-            const blackBody = document.getElementById('black-openings-tbody');
-            blackBody.innerHTML = analysisData.black_openings.slice(0, 10).map(o => `
+            document.getElementById('white-loss-tbody').innerHTML = topOpenings.white_losing.map(o => `
                 <tr class="hover:bg-slate-700/30">
-                    <td class="py-2 px-3 font-medium text-slate-200">${o.opening}</td>
-                    <td class="py-2 px-2 text-center">${o.games}</td>
-                    <td class="py-2 px-2 text-center text-rose-400 font-bold">${o.loss_rate}%</td>
-                    <td class="py-2 px-2 text-center text-emerald-400 font-semibold">${o.win_rate}%</td>
+                    <td class="py-1.5 px-3 font-medium text-slate-200">${o.op}</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.total}</td>
+                    <td class="py-1.5 px-2 text-center text-rose-400 font-bold">${o.loss_rate}%</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.win_rate}%</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('black-win-tbody').innerHTML = topOpenings.black_winning.map(o => `
+                <tr class="hover:bg-slate-700/30">
+                    <td class="py-1.5 px-3 font-medium text-slate-200">${o.op}</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.total}</td>
+                    <td class="py-1.5 px-2 text-center text-emerald-400 font-bold">${o.win_rate}%</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.loss_rate}%</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('black-loss-tbody').innerHTML = topOpenings.black_losing.map(o => `
+                <tr class="hover:bg-slate-700/30">
+                    <td class="py-1.5 px-3 font-medium text-slate-200">${o.op}</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.total}</td>
+                    <td class="py-1.5 px-2 text-center text-rose-400 font-bold">${o.loss_rate}%</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400">${o.win_rate}%</td>
                 </tr>
             `).join('');
         }
-        renderTables();
+        renderTopTables();
 
         // Switch Tabs
         function switchTab(tabId) {
-            ['overview', 'disasters', 'trainer', 'repertoire'].forEach(id => {
+            ['overview', 'trainer', 'disasters', 'repertoire'].forEach(id => {
                 document.getElementById('view-' + id).classList.add('hidden');
                 document.getElementById('tab-' + id).classList.remove('active');
             });
@@ -381,11 +472,278 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             if (tabId === 'disasters') {
                 setTimeout(() => { if (replayBoard) replayBoard.resize(); }, 100);
             } else if (tabId === 'trainer') {
-                setTimeout(() => { if (drillBoard) drillBoard.resize(); }, 100);
+                setTimeout(() => { if (trainerBoard) trainerBoard.resize(); }, 100);
             }
         }
 
-        // Replayer Engine
+        // ==========================================
+        // COMPREHENSIVE OPENING TRAINER ENGINE
+        // ==========================================
+        const openingDrills = [
+            // ⚪ WHITE FIXES (LOSING LINES)
+            {
+                id: 0,
+                category: "white_fix",
+                title: "⚪ White Fix: Refuting Englund Gambit (1.d4 e5)",
+                tag: "65% Loss Rate Fix",
+                side: "white",
+                moves: [
+                    { uci: "d2d4", san: "d4", comment: "1. d4 - Start with Queen's Pawn" },
+                    { uci: "e7e5", san: "e5", comment: "Opponent plays Englund Gambit" },
+                    { uci: "d4e5", san: "dxe5", comment: "2. dxe5 - Accept the pawn" },
+                    { uci: "b8c6", san: "Nc6", comment: "Opponent develops knight" },
+                    { uci: "g1f3", san: "Nf3", comment: "3. Nf3 - Guard e5" },
+                    { uci: "d8e7", san: "Qe7", comment: "Black attacks e5 again" },
+                    { uci: "c1f4", san: "Bf4", comment: "4. Bf4 - Solidify e5" },
+                    { uci: "e7b4", san: "Qb4+", comment: "TRAP MOVE! Black forks King and Bishop" },
+                    { uci: "f4d2", san: "Bd2!", comment: "5. Bd2! - The Winning Move! Never play Qd2" },
+                    { uci: "b4b2", san: "Qxb2", comment: "Black gets greedy for b2" },
+                    { uci: "b1c3", san: "Nc3!", comment: "6. Nc3! - White is completely winning (+3.5) with Rb1 & Nd5 threats!" }
+                ]
+            },
+            {
+                id: 1,
+                category: "white_fix",
+                title: "⚪ White Fix: Active Queen's Gambit (1.d4 d5 2.c4!)",
+                tag: "70% Passive d4 Fix",
+                side: "white",
+                moves: [
+                    { uci: "d2d4", san: "d4", comment: "1. d4 - Queen's Pawn" },
+                    { uci: "d7d5", san: "d5", comment: "Black takes the center" },
+                    { uci: "c2c4", san: "c4!", comment: "2. c4! - Queen's Gambit! Strike Black's center immediately" },
+                    { uci: "e7e6", san: "e6", comment: "Black defends d5" },
+                    { uci: "b1c3", san: "Nc3", comment: "3. Nc3 - Develop with center pressure" },
+                    { uci: "g8f6", san: "Nf6", comment: "Black develops knight" },
+                    { uci: "c1g5", san: "Bg5!", comment: "4. Bg5! - Active pin on Black's knight before playing e3" }
+                ]
+            },
+            {
+                id: 2,
+                category: "white_fix",
+                title: "⚪ White Fix: Mainline vs Caro-Kann (1.e4 c6 2.d4 d5 3.Nc3)",
+                tag: "66.7% Loss Rate Fix",
+                side: "white",
+                moves: [
+                    { uci: "e2e4", san: "e4", comment: "1. e4 - King's Pawn" },
+                    { uci: "c7c6", san: "c6", comment: "Caro-Kann Defense" },
+                    { uci: "d2d4", san: "d4", comment: "2. d4 - Grab full center" },
+                    { uci: "d7d5", san: "d5", comment: "Black strikes d5" },
+                    { uci: "b1c3", san: "Nc3", comment: "3. Nc3 - Mainline Caro-Kann" },
+                    { uci: "d5e4", san: "dxe4", comment: "Black trades" },
+                    { uci: "c3e4", san: "Nxe4", comment: "4. Nxe4 - Powerful central knight" },
+                    { uci: "c8f5", san: "Bf5", comment: "Black attacks knight" },
+                    { uci: "e4g3", san: "Ng3!", comment: "5. Ng3! - Kick Black's bishop and take space" }
+                ]
+            },
+
+            // ⚫ BLACK FIXES (LOSING LINES)
+            {
+                id: 3,
+                category: "black_fix",
+                title: "⚫ Black Fix: Scandinavian Defense vs 2.e5",
+                tag: "65.6% Loss Rate Fix",
+                side: "black",
+                moves: [
+                    { uci: "e2e4", san: "e4", comment: "White plays 1. e4" },
+                    { uci: "d7d5", san: "d5", comment: "1... d5 - Scandinavian Defense" },
+                    { uci: "e4e5", san: "e5", comment: "White pushes 2. e5" },
+                    { uci: "c8f5", san: "Bf5!", comment: "2... Bf5! - NEVER play e6 first! Bring Bishop outside pawn chain" },
+                    { uci: "d2d4", san: "d4", comment: "White supports e5" },
+                    { uci: "e7e6", san: "e6", comment: "3... e6 - Now solidify the center" },
+                    { uci: "g1f3", san: "Nf3", comment: "White develops" },
+                    { uci: "c7c5", san: "c5!", comment: "4... c5! - Strike White's d4 pawn center!" }
+                ]
+            },
+            {
+                id: 4,
+                category: "black_fix",
+                title: "⚫ Black Fix: Countering London System (1.d4 d5 2.Bf4 c5!)",
+                tag: "72.7% Loss Rate Fix",
+                side: "black",
+                moves: [
+                    { uci: "d2d4", san: "d4", comment: "White plays 1. d4" },
+                    { uci: "d7d5", san: "d5", comment: "1... d5" },
+                    { uci: "c1f4", san: "Bf4", comment: "London System" },
+                    { uci: "c7c5", san: "c5!", comment: "2... c5! - Immediate central counter-punch" },
+                    { uci: "e2e3", san: "e3", comment: "White guards d4" },
+                    { uci: "b8c6", san: "Nc6", comment: "3... Nc6 - Pressure d4" },
+                    { uci: "g1f3", san: "Nf3", comment: "White develops" },
+                    { uci: "d8b6", san: "Qb6!", comment: "4... Qb6! - Attack White's undefended b2 pawn!" }
+                ]
+            },
+            {
+                id: 5,
+                category: "black_fix",
+                title: "⚫ Black Fix: Defending Danish Gambit (1.e4 e5 2.d4 exd4 3.c3)",
+                tag: "100% Loss Rate Fix",
+                side: "black",
+                moves: [
+                    { uci: "e2e4", san: "e4", comment: "White plays 1. e4" },
+                    { uci: "e7e5", san: "e5", comment: "1... e5" },
+                    { uci: "d2d4", san: "d4", comment: "White plays Center Game" },
+                    { uci: "e5d4", san: "exd4", comment: "Take the pawn" },
+                    { uci: "c2c3", san: "c3", comment: "Danish Gambit" },
+                    { uci: "d4c3", san: "dxc3", comment: "Accept the gambit" },
+                    { uci: "f1c4", san: "Bc4", comment: "White attacks f7" },
+                    { uci: "c3b2", san: "cxb2", comment: "Take 2nd pawn" },
+                    { uci: "c1b2", san: "Bxb2", comment: "White has dangerous bishops" },
+                    { uci: "d7d5", san: "d5!", comment: "5... d5! - Return 1 pawn to neutralize White's attack!" }
+                ]
+            },
+
+            // 🏆 MASTER WINNING LINES TO REINFORCE
+            {
+                id: 6,
+                category: "winning",
+                title: "⚪ Master Line: Vienna Game Frankenstein-Dracula Attack",
+                tag: "77.8% Win Rate Weapon",
+                side: "white",
+                moves: [
+                    { uci: "e2e4", san: "e4", comment: "1. e4" },
+                    { uci: "e7e5", san: "e5", comment: "1... e5" },
+                    { uci: "b1c3", san: "Nc3", comment: "2. Nc3 - Vienna Game" },
+                    { uci: "g8f6", san: "Nf6", comment: "Black develops" },
+                    { uci: "f1c4", san: "Bc4", comment: "3. Bc4 - Bishop attack" },
+                    { uci: "f6e4", san: "Nxe4", comment: "Black takes e4" },
+                    { uci: "d1h5", san: "Qh5!", comment: "4. Qh5! - Threatens Mate on f7 and Knight on e4!" }
+                ]
+            },
+            {
+                id: 7,
+                category: "winning",
+                title: "⚪ Master Line: Bishop's Opening Berlin Spielmann Attack",
+                tag: "75.0% Win Rate Weapon",
+                side: "white",
+                moves: [
+                    { uci: "e2e4", san: "e4", comment: "1. e4" },
+                    { uci: "e7e5", san: "e5", comment: "1... e5" },
+                    { uci: "f1c4", san: "Bc4", comment: "2. Bc4 - Bishop's Opening" },
+                    { uci: "g8f6", san: "Nf6", comment: "Black develops" },
+                    { uci: "d2d3", san: "d3", comment: "3. d3 - Solidify center" },
+                    { uci: "c7c6", san: "c6", comment: "Black prepares d5" },
+                    { uci: "g1f3", san: "Nf3", comment: "4. Nf3 - Counter-attack e5" },
+                    { uci: "d7d5", san: "d5", comment: "Black pushes d5" },
+                    { uci: "c4b3", san: "Bb3!", comment: "5. Bb3! - Retreat with deadly pressure on d5" }
+                ]
+            }
+        ];
+
+        let trainerBoard = null;
+        let trainerGame = new Chess();
+        let activeDrill = openingDrills[0];
+        let currentStepIndex = 0;
+        let isWaitingUserMove = false;
+
+        function renderDrillsList(filter = "all") {
+            const container = document.getElementById('drills-list-container');
+            const filtered = openingDrills.filter(d => filter === "all" || d.category === filter);
+
+            container.innerHTML = filtered.map(d => `
+                <div onclick="selectDrill(${d.id})" id="drill-item-${d.id}" class="trainer-card cursor-pointer p-3 rounded-lg border border-slate-700 bg-slate-900/70 hover:bg-slate-800 transition ${d.id === activeDrill.id ? 'active' : ''}">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs text-slate-200">${d.title}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-mono ${d.category.includes('fix') ? 'bg-rose-950/80 text-rose-300 border border-rose-800/60' : 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60'}">${d.tag}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterDrills(filter) {
+            ['all', 'white_fix', 'black_fix', 'winning'].forEach(f => {
+                const btn = document.getElementById('filter-' + f);
+                if (btn) {
+                    btn.className = (f === filter) ? 'px-2 py-1 bg-sky-600 rounded text-white' : 'px-2 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300';
+                }
+            });
+            renderDrillsList(filter);
+        }
+
+        function initTrainer() {
+            trainerBoard = Chessboard('trainer-board', {
+                draggable: true,
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: onTrainerDrop
+            });
+            renderDrillsList('all');
+            selectDrill(0);
+        }
+
+        function selectDrill(drillId) {
+            activeDrill = openingDrills.find(d => d.id === drillId) || openingDrills[0];
+            renderDrillsList();
+            resetCurrentDrill();
+        }
+
+        function resetCurrentDrill() {
+            trainerGame.reset();
+            trainerBoard.orientation(activeDrill.side);
+            trainerBoard.position('start');
+            currentStepIndex = 0;
+            advanceDrill();
+        }
+
+        function advanceDrill() {
+            if (currentStepIndex >= activeDrill.moves.length) {
+                document.getElementById('trainer-prompt').innerHTML = "<span class='text-emerald-400 font-bold'>🎉 Drill Complete! Excellent Opening Mastery!</span>";
+                document.getElementById('trainer-subtext').innerText = "You successfully executed all key moves in this line. Try the next drill!";
+                isWaitingUserMove = false;
+                updateStepIndicator();
+                return;
+            }
+
+            const moveData = activeDrill.moves[currentStepIndex];
+            const isUserTurn = (activeDrill.side === "white" && currentStepIndex % 2 === 0) || (activeDrill.side === "black" && currentStepIndex % 2 === 1);
+
+            if (isUserTurn) {
+                isWaitingUserMove = true;
+                document.getElementById('trainer-prompt').innerText = `Your Turn (${activeDrill.side.toUpperCase()}): Play the correct move!`;
+                document.getElementById('trainer-subtext').innerText = moveData.comment;
+            } else {
+                isWaitingUserMove = false;
+                document.getElementById('trainer-prompt').innerText = `Opponent plays: ${moveData.san}`;
+                document.getElementById('trainer-subtext').innerText = moveData.comment;
+                setTimeout(() => {
+                    trainerGame.move(moveData.san);
+                    trainerBoard.position(trainerGame.fen());
+                    currentStepIndex++;
+                    advanceDrill();
+                }, 600);
+            }
+            updateStepIndicator();
+        }
+
+        function updateStepIndicator() {
+            document.getElementById('trainer-step-indicator').innerText = `Step: ${currentStepIndex} / ${activeDrill.moves.length}`;
+        }
+
+        function onTrainerDrop(source, target) {
+            if (!isWaitingUserMove) return 'snapback';
+
+            const expected = activeDrill.moves[currentStepIndex];
+            const attemptedUci = source + target;
+
+            if (attemptedUci === expected.uci) {
+                trainerGame.move(expected.san);
+                trainerBoard.position(trainerGame.fen());
+                currentStepIndex++;
+                isWaitingUserMove = false;
+                setTimeout(advanceDrill, 400);
+            } else {
+                document.getElementById('trainer-subtext').innerHTML = "<span class='text-rose-400 font-bold'>❌ Inaccurate Move!</span> Think about king safety, piece development and central breaks.";
+                return 'snapback';
+            }
+        }
+
+        function showDrillHint() {
+            if (!isWaitingUserMove) return;
+            const expected = activeDrill.moves[currentStepIndex];
+            document.getElementById('trainer-subtext').innerHTML = `<span class='text-amber-400 font-bold'>💡 Hint:</span> Look for <strong>${expected.san}</strong> (${expected.comment})`;
+        }
+
+        // ==========================================
+        // REPLAYER ENGINE
+        // ==========================================
         let replayBoard = null;
         let currentGameIndex = 0;
         let currentPly = 0;
@@ -449,7 +807,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             replayBoard.position(currentFens[currentPly]);
             document.getElementById('replay-status').innerText = `Ply ${currentPly} / ${currentFens.length - 1}`;
             
-            // Highlight move
             document.querySelectorAll('#moves-container span').forEach(el => el.classList.remove('bg-sky-500/30', 'text-sky-300'));
             const curEl = document.getElementById(`ply-${currentPly}`);
             if (curEl) {
@@ -486,78 +843,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             updateReplayStatus();
         }
 
-        // Trainer Engine
-        const drills = [
-            {
-                title: "Englund Gambit: Refuting the Move 5 Trap",
-                desc: "Opponent just played 4...Qb4+ attacking King and Bishop. What is White's winning response?",
-                fen: "r1b1kbnr/pppp1ppp/2n5/4P3/1q3B2/5N2/PPP1PPPP/RN1QKB1R w KQkq - 3 5",
-                orientation: "white",
-                solutionMove: { from: "f4", to: "d2" },
-                explanation: "Excellent! 5.Bd2! protects your bishop and threatens 6.Nc3! Next when Black takes Qxb2, you play 6.Nc3! (or 6.Bc3) and Black is completely lost (+3.5)!"
-            },
-            {
-                title: "Scandinavian Defense: Against 2.e5",
-                desc: "White just pushed 2.e5. Which active bishop move must you play BEFORE playing e6?",
-                fen: "rnbqkbnr/ppp1pppp/8/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
-                orientation: "black",
-                solutionMove: { from: "c8", to: "f5" },
-                explanation: "Perfect! 2...Bf5! brings your bishop outside the pawn chain. Now you can follow up comfortably with e6, c5, and Nc6!"
-            },
-            {
-                title: "Countering the London System: Immediate Central Strike",
-                desc: "White played 1.d4 d5 2.Bf4. What is Black's most energetic central break?",
-                fen: "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 1 2",
-                orientation: "black",
-                solutionMove: { from: "c7", to: "c5" },
-                explanation: "Spot on! 2...c5! challenges White's d4 pawn and prepares 3...Nc6 and 4...Qb6, attacking White's weakened b2 square!"
-            }
-        ];
-
-        let currentDrillIndex = 0;
-        let drillBoard = null;
-        let drillGame = new Chess();
-
-        function initTrainer() {
-            drillBoard = Chessboard('drill-board', {
-                draggable: true,
-                position: drills[0].fen,
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: onDrillDrop
-            });
-            loadDrill(0);
-        }
-
-        function loadDrill(index) {
-            currentDrillIndex = index;
-            const d = drills[index];
-            document.getElementById('drill-title').innerText = d.title;
-            document.getElementById('drill-desc').innerHTML = d.desc;
-            document.getElementById('drill-feedback').innerHTML = `
-                <div class="font-semibold text-slate-300">Your Turn: Make your move on the board</div>
-                <div class="text-xs text-slate-400 mt-1">Drag the piece to find the winning move.</div>
-            `;
-            drillGame.load(d.fen);
-            drillBoard.orientation(d.orientation);
-            drillBoard.position(d.fen);
-        }
-
-        function onDrillDrop(source, target) {
-            const d = drills[currentDrillIndex];
-            if (source === d.solutionMove.from && target === d.solutionMove.to) {
-                document.getElementById('drill-feedback').innerHTML = `
-                    <div class="font-bold text-emerald-400">🎉 Correct Move!</div>
-                    <div class="text-xs text-slate-200 mt-1 leading-relaxed">${d.explanation}</div>
-                `;
-            } else {
-                document.getElementById('drill-feedback').innerHTML = `
-                    <div class="font-bold text-rose-400">❌ Inaccurate Move</div>
-                    <div class="text-xs text-slate-300 mt-1">Try again! Think about piece activity and king safety.</div>
-                `;
-                return 'snapback';
-            }
-        }
-
         // Initialization
         $(document).ready(function() {
             initReplayer();
@@ -578,7 +863,8 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         .replace("__RESIGNED__", str(analysis_data.get('loss_reasons', {}).get('resigned', 0))) \
         .replace("__DISASTERS_COUNT__", str(analysis_data.get('early_disasters_count', 0))) \
         .replace("__ANALYSIS_DATA__", stats_json) \
-        .replace("__USER_STATS__", user_stats_json)
+        .replace("__USER_STATS__", user_stats_json) \
+        .replace("__TOP_OPENINGS__", top_openings_json)
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
