@@ -1,5 +1,5 @@
 """
-HTML Dashboard & Full Lichess-Style Opening Explorer, Trainer & Stockfish Engine with Live Arrows & Study Tracker
+HTML Dashboard & Full Lichess-Style Opening Explorer, Trainer, Sparring Bot & Stockfish Engine
 """
 import json
 import os
@@ -24,7 +24,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Diagnostics & Study Tracker - __USERNAME__</title>
+    <title>Chess Diagnostics & Opening Sparring Bot - __USERNAME__</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -51,10 +51,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <span class="text-3xl">♟️</span>
             <div>
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    Chess Diagnostics & Study Tracker
+                    Chess Diagnostics & Opening Sparring Bot
                     <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded font-mono">__USERNAME__</span>
                 </h1>
-                <p class="text-xs text-slate-400">Stockfish 18 Engine, Live Move Arrows, Study Tracker & Lichess Explorer</p>
+                <p class="text-xs text-slate-400">Play Against Opening-Locked PC Bots, Stockfish 18 Move Arrows & Study Tracker</p>
             </div>
         </div>
         <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
@@ -72,20 +72,121 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
     <!-- Navigation Tabs -->
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6">
-        <nav class="flex space-x-8 text-sm">
-            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">⚡ Stockfish Lost Games Replayer & Study Tracker</button>
-            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎯 Lichess-Style Explorer & Trainer</button>
-            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">📊 Top 10 Win/Loss Openings</button>
-            <button onclick="switchTab('videos')" id="tab-videos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎥 Master Video Lessons</button>
-            <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">📜 Coach's Golden Rules</button>
+        <nav class="flex space-x-8 text-sm overflow-x-auto">
+            <button onclick="switchTab('sparring')" id="tab-sparring" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚔️ Opening Sparring Bot (Play vs PC)</button>
+            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚡ Stockfish Lost Games Replayer</button>
+            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🎯 Lichess Explorer & Trainer</button>
+            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">📊 Top 10 Win/Loss Openings</button>
+            <button onclick="switchTab('videos')" id="tab-videos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🎥 Master Video Lessons</button>
+            <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">📜 Coach's Golden Rules</button>
         </nav>
     </div>
 
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6">
 
+        <!-- TAB 0: OPENING SPARRING BOT (PLAY VS LOCKED PC OPENINGS) -->
+        <section id="view-sparring" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Interactive Sparring Chessboard -->
+                <div class="lg:col-span-5 flex flex-col items-center">
+                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700 relative">
+                        <div id="sparring-board" style="width: 100%"></div>
+                        <!-- SVG ARROWS FOR SPARRING -->
+                        <svg id="sparring-arrows-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10" style="width: 100%; height: 100%;">
+                            <defs>
+                                <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                                </marker>
+                                <marker id="spar-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                                </marker>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <!-- Sparring Controls -->
+                    <div class="flex items-center gap-2 mt-4">
+                        <button onclick="resetSparringGame()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-bold shadow flex items-center gap-1.5">
+                            <span>🔄</span> New Sparring Game
+                        </button>
+                        <button onclick="undoSparringMove()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-semibold">
+                            ↩️ Takeback
+                        </button>
+                        <button onclick="showSparringHint()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-sm font-bold">
+                            💡 Show Best Move
+                        </button>
+                    </div>
+
+                    <div id="sparring-game-status" class="text-xs text-slate-400 mt-2 font-mono">Move 1 | Your Turn (White)</div>
+                </div>
+
+                <!-- Right: Opening Selector, Bot Mode & Live Feedback -->
+                <div class="lg:col-span-7 space-y-4">
+                    <!-- Opening Bot Selector -->
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-1.5">
+                                <span>🤖</span> Choose PC Bot Opening Repertoire:
+                            </label>
+                            <span id="sparring-bot-tag" class="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded font-mono font-bold">Bot Locked: Scandinavian</span>
+                        </div>
+
+                        <select id="sparring-opening-select" onchange="selectSparringOpening(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500 font-medium">
+                            <optgroup label="⚪ Practice As White (PC Plays As Black):">
+                                <option value="scandi">⚪ White vs 🤖 Scandinavian Defense (PC plays 1...d5 & 2...Qxd5/Nf6)</option>
+                                <option value="englund">⚪ White vs 🤖 Englund Gambit (PC plays 1...e5 2...Nc6 & 4...Qb4+)</option>
+                                <option value="sicilian">⚪ White vs 🤖 Sicilian Defense (PC plays 1...c5 & Open Sicilian)</option>
+                                <option value="french">⚪ White vs 🤖 French Defense (PC plays 1...e6 & 2...d5)</option>
+                                <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (PC plays 1...c6 & 2...d5)</option>
+                            </optgroup>
+                            <optgroup label="⚫ Practice As Black (PC Plays As White):">
+                                <option value="scandi_black">⚫ Black vs 🤖 Scandinavian 2.e5 (PC plays 1.e4 d5 2.e5 - Drill 2...Bf5!)</option>
+                                <option value="london_black">⚫ Black vs 🤖 London System (PC plays 1.d4 d5 2.Bf4 - Drill 2...c5! & 4...Qb6!)</option>
+                                <option value="danish_black">⚫ Black vs 🤖 Danish Gambit (PC plays 1.e4 e5 2.d4 3.c3 - Drill 5...d5!!)</option>
+                                <option value="reti_black">⚫ Black vs 🤖 Reti Opening (PC plays 1.Nf3 d5 2.c4 - Drill 2...d4!)</option>
+                            </optgroup>
+                        </select>
+
+                        <!-- Bot Strategic Goal -->
+                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 text-xs space-y-1">
+                            <div class="font-bold text-amber-400 flex items-center gap-1">
+                                <span>🎯</span> Sparring Goal:
+                            </div>
+                            <p id="sparring-goal-desc" class="text-slate-300 leading-relaxed">
+                                Practice punishing the Scandinavian Defense. Develop actively and attack Black's exposed early Queen.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- LIVE MOVE COACH & EVALUATION -->
+                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border-2 border-sky-500/40 p-4 space-y-3 shadow-xl">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-1.5">
+                                <span>⚡</span> Live Sparring Feedback & Book Check
+                            </h3>
+                            <span id="sparring-eval-badge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded font-mono font-bold">Book Line (+0.4)</span>
+                        </div>
+
+                        <div id="sparring-feedback-box" class="bg-slate-900/90 border border-slate-700 p-3 rounded-lg text-xs space-y-1">
+                            <div class="font-bold text-slate-200" id="sparring-feedback-title">Make your opening move!</div>
+                            <p class="text-slate-400" id="sparring-feedback-sub">Play on the board. The PC will instantly respond with authentic opening book variations.</p>
+                        </div>
+
+                        <!-- Live Moves Table In Sparring -->
+                        <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-700">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Game Notation:</div>
+                            <div id="sparring-moves-list" class="font-mono text-xs text-slate-200 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                                <span class="text-slate-500 italic">No moves played yet</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- TAB 1: STOCKFISH EARLY DISASTER REPLAYER & STUDY TRACKER -->
-        <section id="view-disasters" class="space-y-6">
+        <section id="view-disasters" class="hidden space-y-6">
 
             <!-- STUDY PROGRESS BANNER -->
             <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
@@ -453,7 +554,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Video 1: Englund Gambit -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-rose-950/80 text-rose-400 border border-rose-800/60 px-2 py-0.5 rounded font-mono font-bold">White Fix</span>
@@ -467,7 +567,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
 
-                <!-- Video 2: Danish Gambit -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
@@ -481,7 +580,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
 
-                <!-- Video 3: Beat London System -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
@@ -495,7 +593,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
 
-                <!-- Video 4: Scandinavian 2.e5 -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
@@ -509,7 +606,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
 
-                <!-- Video 5: Reti Opening 2...d4 -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
@@ -523,7 +619,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
 
-                <!-- Video 6: Vienna Frankenstein -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-4 flex-1 space-y-2">
                         <span class="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 px-2 py-0.5 rounded font-mono font-bold">Master Weapon</span>
@@ -541,7 +636,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
         <!-- TAB 5: COACH'S GOLDEN RULES & REPERTOIRE -->
         <section id="view-repertoire" class="hidden space-y-6">
-            <!-- 5 Golden "NEVER DO THAT" Rules -->
             <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6">
                 <h3 class="text-lg font-bold text-rose-400 flex items-center gap-2 mb-4">
                     <span>🛑</span> Top 5 "NEVER DO THAT" Rules for 1200 → 1500 Players
@@ -565,45 +659,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     </div>
                 </div>
             </div>
-
-            <!-- Master Repertoire Blueprints -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- White Blueprint -->
-                <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6 space-y-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-2xl">⚪</span>
-                        <h3 class="text-lg font-bold text-white">White Master Repertoire Plan</h3>
-                    </div>
-                    <div class="space-y-3 text-xs leading-relaxed text-slate-300">
-                        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700">
-                            <h4 class="font-bold text-amber-400 mb-1">1. Against Englund Gambit (1.d4 e5 2.dxe5 Nc6 3.Nf3 Qe7)</h4>
-                            <p>Play <strong>4.Bf4 Qb4+ 5.Bd2! Qxb2 6.Nc3!</strong> (Threatens 7.Rb1 or 7.Nd5 with double attack on c7 and Queen). Evaluation is +3.5 for White!</p>
-                        </div>
-                        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700">
-                            <h4 class="font-bold text-amber-400 mb-1">2. Move 2 Choice (Instead of Passive Zukertort)</h4>
-                            <p>When playing 1.d4 d5, play <strong>2.c4! (Queen's Gambit)</strong> to control the center, or <strong>2.Bf4! (London System)</strong> before playing e3. Avoid passive d4 + Nf3 + e3 + Be2 setups.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Black Blueprint -->
-                <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-6 space-y-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-2xl">⚫</span>
-                        <h3 class="text-lg font-bold text-white">Black Master Repertoire Plan</h3>
-                    </div>
-                    <div class="space-y-3 text-xs leading-relaxed text-slate-300">
-                        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700">
-                            <h4 class="font-bold text-sky-400 mb-1">1. In the Scandinavian vs 2.e5 (1.e4 d5 2.e5)</h4>
-                            <p>Do NOT play 2...e6 (trapping your bishop). Play <strong>2...Bf5!</strong> first, followed by <strong>3...e6</strong> and <strong>4...c5!</strong> attacking White's d4 pawn center.</p>
-                        </div>
-                        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700">
-                            <h4 class="font-bold text-sky-400 mb-1">2. Against London System (1.d4 d5 2.Bf4)</h4>
-                            <p>Strike immediately with <strong>2...c5!</strong> followed by <strong>3.e3 Nc6 4.Nf3 Qb6!</strong> attacking the vulnerable b2 pawn.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </section>
 
     </main>
@@ -613,7 +668,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         const userStats = __USER_STATS__;
         const topOpenings = __TOP_OPENINGS__;
 
-        // Populate header stats
         if (userStats && userStats.chess_blitz) {
             document.getElementById('blitz-rating').innerText = userStats.chess_blitz.last.rating;
         }
@@ -668,20 +722,349 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
         // Switch Tabs
         function switchTab(tabId) {
-            ['disasters', 'trainer', 'overview', 'videos', 'repertoire'].forEach(id => {
+            ['sparring', 'disasters', 'trainer', 'overview', 'videos', 'repertoire'].forEach(id => {
                 document.getElementById('view-' + id).classList.add('hidden');
                 document.getElementById('tab-' + id).classList.remove('active');
             });
             document.getElementById('view-' + tabId).classList.remove('hidden');
             document.getElementById('tab-' + tabId).classList.add('active');
 
-            if (tabId === 'disasters') {
+            if (tabId === 'sparring') {
+                setTimeout(() => { if (sparringBoard) sparringBoard.resize(); }, 100);
+            } else if (tabId === 'disasters') {
                 setTimeout(() => { 
                     if (replayBoard) replayBoard.resize(); 
                     renderReplayArrows();
                 }, 100);
             } else if (tabId === 'trainer') {
                 setTimeout(() => { if (trainerBoard) trainerBoard.resize(); }, 100);
+            }
+        }
+
+        // ==========================================
+        // ⚔️ OPENING SPARRING BOT ENGINE (PLAY VS PC)
+        // ==========================================
+        const sparringRepertoires = {
+            scandi: {
+                title: "⚪ White vs 🤖 Scandinavian Defense",
+                userSide: "white",
+                goal: "Black will strictly play the Scandinavian (1...d5). Choose 2.exd5 or 2.Nc3/2.d4. If 2.exd5 Qxd5, play 3.Nc3! gaining tempo on Black's queen.",
+                botTag: "Bot Locked: Scandinavian",
+                tree: {
+                    "": ["e4", "d4"],
+                    "e4": ["d5"],
+                    "e4 d5 exd5": ["Qxd5", "Nf6"],
+                    "e4 d5 exd5 Qxd5": ["Nc3"],
+                    "e4 d5 exd5 Qxd5 Nc3": ["Qa5", "Qd8", "Qd6"],
+                    "e4 d5 exd5 Qxd5 Nc3 Qa5": ["d4"],
+                    "e4 d5 exd5 Qxd5 Nc3 Qa5 d4": ["Nf6", "c6"],
+                    "e4 d5 exd5 Nf6": ["d4", "c4", "Nf3"],
+                    "e4 d5 exd5 Nf6 d4": ["Nxd5"],
+                    "e4 d5 e5": ["Bf5", "c5"],
+                    "e4 d5 Nc3": ["dxe4", "d4"]
+                }
+            },
+            englund: {
+                title: "⚪ White vs 🤖 Englund Gambit",
+                userSide: "white",
+                goal: "Black will play 1...e5 2...Nc6 3...Qe7 4...Qb4+. Play 5.Bd2! and 6.Nc3! to completely refute Black's trap and reach +3.5 advantage!",
+                botTag: "Bot Locked: Englund Gambit",
+                tree: {
+                    "": ["d4"],
+                    "d4": ["e5"],
+                    "d4 e5 dxe5": ["Nc6"],
+                    "d4 e5 dxe5 Nc6 Nf3": ["Qe7"],
+                    "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4": ["Qb4+"],
+                    "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+ Bd2": ["Qxb2"],
+                    "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+ Bd2 Qxb2 Nc3": ["Bb4", "Nb4"]
+                }
+            },
+            sicilian: {
+                title: "⚪ White vs 🤖 Sicilian Defense",
+                userSide: "white",
+                goal: "Practice Open Sicilian (1.e4 c5 2.Nf3 & 3.d4) or Alapin (2.c3). Fight for central control with rapid knight and bishop development.",
+                botTag: "Bot Locked: Sicilian Defense",
+                tree: {
+                    "": ["e4"],
+                    "e4": ["c5"],
+                    "e4 c5 Nf3": ["d6", "Nc6", "e6"],
+                    "e4 c5 Nf3 d6 d4": ["cxd4"],
+                    "e4 c5 Nf3 d6 d4 cxd4 Nxd4": ["Nf6"],
+                    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3": ["a6", "g6", "e6"]
+                }
+            },
+            french: {
+                title: "⚪ White vs 🤖 French Defense",
+                userSide: "white",
+                goal: "Practice Advance Variation (3.e5) or Classical (3.Nc3). Secure your central pawns and prevent Black from freeing their light bishop.",
+                botTag: "Bot Locked: French Defense",
+                tree: {
+                    "": ["e4"],
+                    "e4": ["e6"],
+                    "e4 e6 d4": ["d5"],
+                    "e4 e6 d4 d5 e5": ["c5"],
+                    "e4 e6 d4 d5 e5 c5 c3": ["Nc6"],
+                    "e4 e6 d4 d5 Nc3": ["Nf6", "Bb4", "dxe4"]
+                }
+            },
+            caro: {
+                title: "⚪ White vs 🤖 Caro-Kann Defense",
+                userSide: "white",
+                goal: "Practice Advance Variation (3.e5) or Classical (3.Nc3). Gain space and control key central squares before Black consolidates.",
+                botTag: "Bot Locked: Caro-Kann",
+                tree: {
+                    "": ["e4"],
+                    "e4": ["c6"],
+                    "e4 c6 d4": ["d5"],
+                    "e4 c6 d4 d5 e5": ["Bf5"],
+                    "e4 c6 d4 d5 e5 Bf5 Nf3": ["e6"],
+                    "e4 c6 d4 d5 Nc3": ["dxe4"]
+                }
+            },
+            scandi_black: {
+                title: "⚫ Black vs 🤖 Scandinavian 2.e5",
+                userSide: "black",
+                goal: "When PC pushes 2.e5, play 2...Bf5! outside the pawn chain. Then play 3...e6, 4...c5! and 5...Nc6 with an active, winning setup.",
+                botTag: "Bot Locked: Scandi 2.e5",
+                tree: {
+                    "": ["e4"],
+                    "e4 d5": ["e5", "exd5"],
+                    "e4 d5 e5 Bf5": ["d4", "Nf3"],
+                    "e4 d5 e5 Bf5 d4 e6": ["Nf3", "Bd3"],
+                    "e4 d5 e5 Bf5 d4 e6 Nf3 c5": ["c3", "Be2"]
+                }
+            },
+            london_black: {
+                title: "⚫ Black vs 🤖 London System",
+                userSide: "black",
+                goal: "When PC plays London 2.Bf4, strike immediately with 2...c5! and follow up with 3...Nc6 & 4...Qb6! attacking the unguarded b2 pawn.",
+                botTag: "Bot Locked: London System",
+                tree: {
+                    "": ["d4"],
+                    "d4 d5": ["Bf4"],
+                    "d4 d5 Bf4 c5": ["e3", "c3"],
+                    "d4 d5 Bf4 c5 e3 Nc6": ["Nf3"],
+                    "d4 d5 Bf4 c5 e3 Nc6 Nf3 Qb6": ["b3", "Nc3", "Qc1"]
+                }
+            },
+            danish_black: {
+                title: "⚫ Black vs 🤖 Danish Gambit",
+                userSide: "black",
+                goal: "When PC plays the Danish Gambit (1.e4 e5 2.d4 exd4 3.c3), take the pawns and play 5...d5!! (Schlechter Defense) to shut down White's bishops.",
+                botTag: "Bot Locked: Danish Gambit",
+                tree: {
+                    "": ["e4"],
+                    "e4 e5": ["d4"],
+                    "e4 e5 d4 exd4": ["c3"],
+                    "e4 e5 d4 exd4 c3 dxc3": ["Bc4"],
+                    "e4 e5 d4 exd4 c3 dxc3 Bc4 cxb2": ["Bxb2"],
+                    "e4 e5 d4 exd4 c3 dxc3 Bc4 cxb2 Bxb2 d5": ["Bxd5", "exd5"]
+                }
+            },
+            reti_black: {
+                title: "⚫ Black vs 🤖 Reti Opening",
+                userSide: "black",
+                goal: "When PC plays 1.Nf3 d5 2.c4, push 2...d4! seizing space and stopping Nc3. Follow with 3...c5 and 4...Nc6.",
+                botTag: "Bot Locked: Reti Opening",
+                tree: {
+                    "": ["Nf3"],
+                    "Nf3 d5": ["c4"],
+                    "Nf3 d5 c4 d4": ["e3", "g3", "b4"],
+                    "Nf3 d5 c4 d4 e3 c5": ["exd4", "b4"]
+                }
+            }
+        };
+
+        let sparringBoard = null;
+        let sparringGame = new Chess();
+        let currentSparringRep = sparringRepertoires.scandi;
+
+        function initSparring() {
+            sparringBoard = Chessboard('sparring-board', {
+                draggable: true,
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: onSparringDrop
+            });
+
+            selectSparringOpening("scandi");
+        }
+
+        function selectSparringOpening(key) {
+            currentSparringRep = sparringRepertoires[key] || sparringRepertoires.scandi;
+            document.getElementById('sparring-bot-tag').innerText = currentSparringRep.botTag;
+            document.getElementById('sparring-goal-desc').innerText = currentSparringRep.goal;
+            resetSparringGame();
+        }
+
+        function resetSparringGame() {
+            sparringGame.reset();
+            sparringBoard.orientation(currentSparringRep.userSide);
+            sparringBoard.position('start');
+            clearSparringArrows();
+            updateSparringStatus();
+            updateSparringMovesUI();
+
+            // If PC moves first (when user plays Black)
+            if (currentSparringRep.userSide === "black") {
+                setTimeout(makeBotMove, 400);
+            }
+        }
+
+        function getMovesHistorySAN() {
+            return sparringGame.history().join(" ");
+        }
+
+        function onSparringDrop(source, target) {
+            // Check turn
+            const turn = sparringGame.turn() === 'w' ? 'white' : 'black';
+            if (turn !== currentSparringRep.userSide) return 'snapback';
+
+            // See if the move is legal
+            const move = sparringGame.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            clearSparringArrows();
+            updateSparringMovesUI();
+            updateSparringStatus();
+
+            // Check if game over
+            if (sparringGame.game_over()) {
+                handleSparringGameOver();
+                return;
+            }
+
+            // Trigger PC Response
+            setTimeout(makeBotMove, 350);
+        }
+
+        function makeBotMove() {
+            if (sparringGame.game_over()) return;
+
+            const hist = getMovesHistorySAN();
+            const candidates = currentSparringRep.tree[hist];
+
+            let chosenMove = null;
+            if (candidates && candidates.length > 0) {
+                // Pick random variation from opening tree
+                chosenMove = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            if (chosenMove) {
+                const res = sparringGame.move(chosenMove);
+                if (res) {
+                    sparringBoard.position(sparringGame.fen());
+                    updateSparringMovesUI();
+                    updateSparringStatus();
+                    document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-emerald-400 font-bold">📖 Book Move: ${res.san}</span>`;
+                    document.getElementById('sparring-feedback-sub').innerText = "Opponent is playing strictly according to theoretical opening lines.";
+                    document.getElementById('sparring-eval-badge').innerText = "Opening Book Line";
+                    return;
+                }
+            }
+
+            // Out of book tree: pick a standard legal move or random best move
+            const legalMoves = sparringGame.moves();
+            if (legalMoves.length > 0) {
+                const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+                sparringGame.move(randomMove);
+                sparringBoard.position(sparringGame.fen());
+                updateSparringMovesUI();
+                updateSparringStatus();
+                document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-sky-300 font-bold">⚡ Out of Book: ${randomMove}</span>`;
+                document.getElementById('sparring-feedback-sub').innerText = "You have navigated past the initial opening book! Keep developing your pieces.";
+            }
+        }
+
+        function undoSparringMove() {
+            sparringGame.undo(); // Undo Bot
+            sparringGame.undo(); // Undo User
+            sparringBoard.position(sparringGame.fen());
+            clearSparringArrows();
+            updateSparringMovesUI();
+            updateSparringStatus();
+        }
+
+        function showSparringHint() {
+            const hist = getMovesHistorySAN();
+            const legal = sparringGame.moves({ verbose: true });
+            if (legal.length === 0) return;
+
+            const bestMove = legal[0];
+            drawSparringArrow(bestMove.from, bestMove.to, "#22c55e", "spar-green");
+            document.getElementById('sparring-feedback-sub').innerHTML = `<span class="text-amber-400 font-bold">💡 Recommended Move:</span> <strong>${bestMove.san}</strong> (from ${bestMove.from} to ${bestMove.to})`;
+        }
+
+        function updateSparringStatus() {
+            const turn = sparringGame.turn() === 'w' ? 'White' : 'Black';
+            const isUser = (turn.toLowerCase() === currentSparringRep.userSide);
+            const moveNum = Math.floor(sparringGame.history().length / 2) + 1;
+            document.getElementById('sparring-game-status').innerText = `Move ${moveNum} | ${isUser ? 'Your Turn (' + turn + ')' : 'PC Thinking...'}`;
+        }
+
+        function updateSparringMovesUI() {
+            const moves = sparringGame.history();
+            const container = document.getElementById('sparring-moves-list');
+            if (moves.length === 0) {
+                container.innerHTML = `<span class="text-slate-500 italic">No moves played yet</span>`;
+                return;
+            }
+
+            container.innerHTML = moves.map((m, i) => {
+                const num = Math.floor(i/2) + 1;
+                const pref = (i % 2 === 0) ? `${num}. ` : '';
+                return `<span class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 border border-slate-700">${pref}${m}</span>`;
+            }).join('');
+        }
+
+        function drawSparringArrow(fromSq, toSq, color, markerId) {
+            const svg = document.getElementById('sparring-arrows-svg');
+            if (!svg) return;
+            const boardEl = document.getElementById('sparring-board');
+            const boardWidth = boardEl ? boardEl.clientWidth : 420;
+            const orientation = currentSparringRep.userSide;
+
+            const arrowHtml = drawSvgArrow(fromSq, toSq, color, markerId, orientation, boardWidth, false);
+            svg.innerHTML = `
+                <defs>
+                    <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                    </marker>
+                    <marker id="spar-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                    </marker>
+                </defs>
+                ${arrowHtml}
+            `;
+        }
+
+        function clearSparringArrows() {
+            const svg = document.getElementById('sparring-arrows-svg');
+            if (svg) {
+                svg.innerHTML = `
+                    <defs>
+                        <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                        </marker>
+                        <marker id="spar-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                        </marker>
+                    </defs>
+                `;
+            }
+        }
+
+        function handleSparringGameOver() {
+            if (sparringGame.in_checkmate()) {
+                const winner = sparringGame.turn() === 'w' ? 'Black' : 'White';
+                document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-amber-400 font-bold">🏆 Checkmate! ${winner} Wins!</span>`;
+            } else if (sparringGame.in_draw()) {
+                document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-slate-300 font-bold">🤝 Game Drawn!</span>`;
             }
         }
 
@@ -738,14 +1121,15 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('cnt-unstudied').innerText = unstudiedCount;
             document.getElementById('cnt-studied').innerText = studiedCount;
 
-            // Update Current Game Studied Button
             const btn = document.getElementById('btn-toggle-study');
-            if (studiedSet.has(currentGameIndex)) {
-                btn.innerHTML = `<span>✓</span> Studied (Click to Unmark)`;
-                btn.className = `px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5 border border-emerald-400`;
-            } else {
-                btn.innerHTML = `<span>✅</span> Mark as Studied`;
-                btn.className = `px-3 py-1 bg-slate-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5`;
+            if (btn) {
+                if (studiedSet.has(currentGameIndex)) {
+                    btn.innerHTML = `<span>✓</span> Studied (Click to Unmark)`;
+                    btn.className = `px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5 border border-emerald-400`;
+                } else {
+                    btn.innerHTML = `<span>✅</span> Mark as Studied`;
+                    btn.className = `px-3 py-1 bg-slate-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5`;
+                }
             }
 
             renderGameSelectorOptions();
@@ -776,6 +1160,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         function renderGameSelectorOptions() {
             const studiedSet = getStudiedSet();
             const select = document.getElementById('game-select');
+            if (!select) return;
             const total = analysisData.early_disasters.length;
 
             let html = "";
@@ -825,7 +1210,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         function loadCurrentGameNote() {
             const notesDict = getNotesDict();
             const noteInput = document.getElementById('game-user-note');
-            noteInput.value = notesDict[currentGameIndex] || "";
+            if (noteInput) noteInput.value = notesDict[currentGameIndex] || "";
         }
 
         // ==========================================
@@ -927,18 +1312,15 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 </defs>
             `;
 
-            // When viewing a specific move
             if (currentPly > 0 && currentPly <= sfList.length) {
                 const plyData = sfList[currentPly - 1];
 
-                // If inaccuracy/blunder was played, draw red arrow for played move
                 if (plyData.played_uci && (plyData.quality === 'Blunder' || plyData.quality === 'Mistake' || plyData.quality === 'Inaccuracy')) {
                     const fromSq = plyData.played_uci.substring(0, 2);
                     const toSq = plyData.played_uci.substring(2, 4);
                     arrowsHtml += drawSvgArrow(fromSq, toSq, "#ef4444", "arrow-red", orientation, boardWidth, true);
                 }
 
-                // Draw bold green arrow for Stockfish Best Move
                 if (plyData.best_uci) {
                     const fromSq = plyData.best_uci.substring(0, 2);
                     const toSq = plyData.best_uci.substring(2, 4);
@@ -971,6 +1353,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
             window.addEventListener('resize', () => {
                 if (replayBoard) replayBoard.resize();
+                if (sparringBoard) sparringBoard.resize();
                 renderReplayArrows();
             });
         }
@@ -986,7 +1369,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('meta-result').innerText = `${g.result} in ${g.moves_count} moves`;
             document.getElementById('meta-link').href = g.url;
 
-            // Load Coach Advice Card
             if (g.coach_advice) {
                 document.getElementById('coach-card').classList.remove('hidden');
                 document.getElementById('coach-never-rule').innerText = g.coach_advice.never_rule;
@@ -1003,7 +1385,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             replayBoard.orientation(g.color.toLowerCase());
             replayBoard.position(currentFens[0]);
 
-            // Render moves with colored badge dots
             const mc = document.getElementById('moves-container');
             const sfData = g.stockfish_analysis || [];
 
@@ -1029,14 +1410,12 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             replayBoard.position(currentFens[currentPly]);
             document.getElementById('replay-status').innerText = `Ply ${currentPly} / ${currentFens.length - 1}`;
             
-            // Highlight move
             document.querySelectorAll('#moves-container span').forEach(el => el.classList.remove('bg-sky-500/30', 'text-sky-300'));
             const curEl = document.getElementById(`ply-${currentPly}`);
             if (curEl) {
                 curEl.classList.add('bg-sky-500/30', 'text-sky-300');
             }
 
-            // Update Stockfish Live Card
             const g = analysisData.early_disasters[currentGameIndex];
             const sfList = g.stockfish_analysis || [];
             
@@ -1104,398 +1483,17 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 side: "white",
                 strategy: "When Black plays 4...Qb4+, NEVER block with Qd2 or hang b2! Play 5.Bd2! and when 5...Qxb2, play 6.Nc3! White threatens 7.Rb1 (trapping Black's queen) and 7.Nd5 (forking c7). Black is dead lost (+3.5).",
                 moves: [
-                    { 
-                        uci: "d2d4", san: "d4", comment: "1. d4 - Start with Queen's Pawn",
-                        eval: "+0.3",
-                        candidates: [
-                            { san: "d4", games: 1845000, eval: "+0.3", w: 38, d: 34, b: 28 },
-                            { san: "e4", games: 2150000, eval: "+0.3", w: 37, d: 33, b: 30 },
-                            { san: "Nf3", games: 420000, eval: "+0.2", w: 36, d: 36, b: 28 }
-                        ]
-                    },
-                    { 
-                        uci: "e7e5", san: "e5", comment: "Opponent plays Englund Gambit",
-                        eval: "+1.6",
-                        candidates: [
-                            { san: "dxe5", games: 98000, eval: "+1.6", w: 62, d: 18, b: 20 },
-                            { san: "e4", games: 12000, eval: "+0.5", w: 42, d: 28, b: 30 }
-                        ]
-                    },
-                    { 
-                        uci: "d4e5", san: "dxe5", comment: "2. dxe5 - Accept the gambit pawn",
-                        eval: "+1.6",
-                        candidates: [
-                            { san: "Nc6", games: 64000, eval: "+1.6", w: 60, d: 19, b: 21 },
-                            { san: "d6", games: 15000, eval: "+1.8", w: 65, d: 17, b: 18 }
-                        ]
-                    },
-                    { 
-                        uci: "b8c6", san: "Nc6", comment: "Opponent develops knight targeting e5",
-                        eval: "+1.7",
-                        candidates: [
-                            { san: "Nf3", games: 58000, eval: "+1.7", w: 61, d: 19, b: 20 },
-                            { san: "Bf4", games: 12000, eval: "+1.2", w: 54, d: 21, b: 25 }
-                        ]
-                    },
-                    { 
-                        uci: "g1f3", san: "Nf3", comment: "3. Nf3 - Guard e5 securely",
-                        eval: "+1.7",
-                        candidates: [
-                            { san: "Qe7", games: 44000, eval: "+1.7", w: 62, d: 18, b: 20 },
-                            { san: "Nge7", games: 8000, eval: "+2.1", w: 68, d: 16, b: 16 }
-                        ]
-                    },
-                    { 
-                        uci: "d8e7", san: "Qe7", comment: "Black attacks e5 again",
-                        eval: "+1.8",
-                        candidates: [
-                            { san: "Bf4", games: 32000, eval: "+1.8", w: 63, d: 18, b: 19 },
-                            { san: "Nc3", games: 11000, eval: "+1.9", w: 64, d: 17, b: 19 }
-                        ]
-                    },
-                    { 
-                        uci: "c1f4", san: "Bf4", comment: "4. Bf4 - Defend e5 and invite the trap",
-                        eval: "+1.8",
-                        candidates: [
-                            { san: "Qb4+", games: 28000, eval: "+1.8", w: 63, d: 18, b: 19 }
-                        ]
-                    },
-                    { 
-                        uci: "e7b4", san: "Qb4+", comment: "TRAP MOVE! Black forks King and Bishop",
-                        eval: "+3.5",
-                        candidates: [
-                            { san: "Bd2!", games: 22000, eval: "+3.5", w: 74, d: 14, b: 12 },
-                            { san: "Qd2??", games: 5000, eval: "-6.2", w: 8, d: 6, b: 86 }
-                        ]
-                    },
-                    { 
-                        uci: "f4d2", san: "Bd2!", comment: "5. Bd2! - The Winning Move! Never play Qd2",
-                        eval: "+3.5",
-                        candidates: [
-                            { san: "Qxb2", games: 18000, eval: "+3.5", w: 75, d: 13, b: 12 }
-                        ]
-                    },
-                    { 
-                        uci: "b4b2", san: "Qxb2", comment: "Black greedily captures on b2",
-                        eval: "+3.8",
-                        candidates: [
-                            { san: "Nc3!", games: 14000, eval: "+3.8", w: 78, d: 12, b: 10 },
-                            { san: "Bc3", games: 4000, eval: "+3.4", w: 72, d: 15, b: 13 }
-                        ]
-                    },
-                    { 
-                        uci: "b1c3", san: "Nc3!", comment: "6. Nc3! - Threatens 7.Rb1 (trapping Queen) and 7.Nd5! Total victory.",
-                        eval: "+3.8",
-                        candidates: [
-                            { san: "Bb4", games: 9000, eval: "+3.8", w: 78, d: 12, b: 10 }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: 1,
-                category: "white_fix",
-                title: "⚪ White: Active Queen's Gambit (1.d4 d5 2.c4!)",
-                tag: "70% Passive d4 Fix",
-                side: "white",
-                strategy: "When playing 1.d4, immediately contest Black's d5 pawn with 2.c4! This gives you central space and allows your knights and bishops to develop aggressively.",
-                moves: [
-                    { 
-                        uci: "d2d4", san: "d4", comment: "1. d4 - Queen's Pawn",
-                        eval: "+0.3",
-                        candidates: [
-                            { san: "d4", games: 1845000, eval: "+0.3", w: 38, d: 34, b: 28 }
-                        ]
-                    },
-                    { 
-                        uci: "d7d5", san: "d5", comment: "Black takes the center",
-                        eval: "+0.4",
-                        candidates: [
-                            { san: "c4!", games: 780000, eval: "+0.4", w: 41, d: 35, b: 24 },
-                            { san: "Nf3", games: 320000, eval: "+0.2", w: 35, d: 36, b: 29 }
-                        ]
-                    },
-                    { 
-                        uci: "c2c4", san: "c4!", comment: "2. c4! - Queen's Gambit! Strike Black's center immediately",
-                        eval: "+0.4",
-                        candidates: [
-                            { san: "e6", games: 390000, eval: "+0.4", w: 40, d: 36, b: 24 },
-                            { san: "c6", games: 260000, eval: "+0.4", w: 39, d: 37, b: 24 },
-                            { san: "dxc4", games: 110000, eval: "+0.6", w: 44, d: 33, b: 23 }
-                        ]
-                    },
-                    { 
-                        uci: "e7e6", san: "e6", comment: "Black defends d5 (Queen's Gambit Declined)",
-                        eval: "+0.5",
-                        candidates: [
-                            { san: "Nc3", games: 280000, eval: "+0.5", w: 42, d: 36, b: 22 },
-                            { san: "Nf3", games: 90000, eval: "+0.4", w: 40, d: 37, b: 23 }
-                        ]
-                    },
-                    { 
-                        uci: "b1c3", san: "Nc3", comment: "3. Nc3 - Develop with center pressure",
-                        eval: "+0.5",
-                        candidates: [
-                            { san: "Nf6", games: 220000, eval: "+0.5", w: 42, d: 36, b: 22 }
-                        ]
-                    },
-                    { 
-                        uci: "g8f6", san: "Nf6", comment: "Black develops knight",
-                        eval: "+0.5",
-                        candidates: [
-                            { san: "Bg5!", games: 160000, eval: "+0.5", w: 43, d: 36, b: 21 },
-                            { san: "cxd5", games: 45000, eval: "+0.5", w: 42, d: 37, b: 21 }
-                        ]
-                    },
-                    { 
-                        uci: "c1g5", san: "Bg5!", comment: "4. Bg5! - Active pin on Black's knight before playing e3!",
-                        eval: "+0.5",
-                        candidates: [
-                            { san: "Be7", games: 120000, eval: "+0.5", w: 43, d: 36, b: 21 }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: 2,
-                category: "black_fix",
-                title: "⚫ Black: Scandinavian vs 2.e5 (The Bishop Free Rule)",
-                tag: "65.6% Loss Rate Fix",
-                side: "black",
-                strategy: "When White plays 2.e5, NEVER play 2...e6! Always play 2...Bf5! first, bringing your bishop outside the pawn chain. Then follow up with 3...e6, 4...c5! and 5...Nc6.",
-                moves: [
-                    { 
-                        uci: "e2e4", san: "e4", comment: "White plays 1. e4",
-                        eval: "+0.3",
-                        candidates: [
-                            { san: "d5", games: 450000, eval: "+0.3", w: 39, d: 29, b: 32 }
-                        ]
-                    },
-                    { 
-                        uci: "d7d5", san: "d5", comment: "1... d5 - Scandinavian Defense",
-                        eval: "+0.4",
-                        candidates: [
-                            { san: "exd5", games: 380000, eval: "+0.4", w: 40, d: 29, b: 31 },
-                            { san: "e5", games: 45000, eval: "-0.2", w: 32, d: 28, b: 40 }
-                        ]
-                    },
-                    { 
-                        uci: "e4e5", san: "e5", comment: "White pushes 2. e5 (Advance Variation)",
-                        eval: "-0.2",
-                        candidates: [
-                            { san: "Bf5!", games: 35000, eval: "-0.2", w: 31, d: 28, b: 41 },
-                            { san: "c5", games: 6000, eval: "-0.1", w: 33, d: 29, b: 38 },
-                            { san: "e6?", games: 3000, eval: "+0.8", w: 58, d: 22, b: 20 }
-                        ]
-                    },
-                    { 
-                        uci: "c8f5", san: "Bf5!", comment: "2... Bf5! - Bishop is FREE! Never trap it on c8",
-                        eval: "-0.2",
-                        candidates: [
-                            { san: "d4", games: 28000, eval: "-0.2", w: 31, d: 28, b: 41 },
-                            { san: "Nf3", games: 5000, eval: "-0.2", w: 32, d: 29, b: 39 }
-                        ]
-                    },
-                    { 
-                        uci: "d2d4", san: "d4", comment: "White supports e5 pawn",
-                        eval: "-0.2",
-                        candidates: [
-                            { san: "e6", games: 26000, eval: "-0.2", w: 31, d: 28, b: 41 }
-                        ]
-                    },
-                    { 
-                        uci: "e7e6", san: "e6", comment: "3... e6 - Now solidify the center comfortably",
-                        eval: "-0.2",
-                        candidates: [
-                            { san: "Nf3", games: 22000, eval: "-0.2", w: 31, d: 28, b: 41 }
-                        ]
-                    },
-                    { 
-                        uci: "g1f3", san: "Nf3", comment: "White develops knight",
-                        eval: "-0.3",
-                        candidates: [
-                            { san: "c5!", games: 18000, eval: "-0.3", w: 29, d: 28, b: 43 }
-                        ]
-                    },
-                    { 
-                        uci: "c7c5", san: "c5!", comment: "4... c5! - Strike White's d4 pawn center with tempo!",
-                        eval: "-0.3",
-                        candidates: [
-                            { san: "c3", games: 14000, eval: "-0.3", w: 29, d: 28, b: 43 }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: 3,
-                category: "black_fix",
-                title: "⚫ Black: Danish Gambit Defense (5...d5 Schlechter Defense)",
-                tag: "100% Loss Rate Fix",
-                side: "black",
-                strategy: "White gives two pawns for monster bishops on c4 and b2. The master refutation is 5...d5!! Returning one pawn closes the dangerous bishop diagonal, forces trades, and leaves Black up a clean pawn with an easy win.",
-                moves: [
-                    { 
-                        uci: "e2e4", san: "e4", comment: "1. e4",
-                        eval: "+0.3",
-                        candidates: [{ san: "e5", games: 850000, eval: "+0.3", w: 37, d: 33, b: 30 }]
-                    },
-                    { 
-                        uci: "e7e5", san: "e5", comment: "1... e5",
-                        eval: "+0.3",
-                        candidates: [{ san: "d4", games: 90000, eval: "+0.3", w: 38, d: 31, b: 31 }]
-                    },
-                    { 
-                        uci: "d2d4", san: "d4", comment: "2. d4 (Center Game)",
-                        eval: "+0.3",
-                        candidates: [{ san: "exd4", games: 82000, eval: "+0.3", w: 38, d: 31, b: 31 }]
-                    },
-                    { 
-                        uci: "e5d4", san: "exd4", comment: "Take the central pawn",
-                        eval: "+0.3",
-                        candidates: [{ san: "c3", games: 24000, eval: "+0.2", w: 36, d: 28, b: 36 }]
-                    },
-                    { 
-                        uci: "c2c3", san: "c3", comment: "Danish Gambit offer",
-                        eval: "+0.2",
-                        candidates: [{ san: "dxc3", games: 19000, eval: "+0.2", w: 36, d: 28, b: 36 }]
-                    },
-                    { 
-                        uci: "d4c3", san: "dxc3", comment: "Take 1st pawn",
-                        eval: "+0.2",
-                        candidates: [{ san: "Bc4", games: 12000, eval: "-0.3", w: 31, d: 24, b: 45 }]
-                    },
-                    { 
-                        uci: "f1c4", san: "Bc4", comment: "White attacks f7",
-                        eval: "-0.3",
-                        candidates: [{ san: "cxb2", games: 9500, eval: "-0.3", w: 31, d: 24, b: 45 }]
-                    },
-                    { 
-                        uci: "c3b2", san: "cxb2", comment: "Take 2nd pawn",
-                        eval: "-0.3",
-                        candidates: [{ san: "Bxb2", games: 9000, eval: "-0.3", w: 31, d: 24, b: 45 }]
-                    },
-                    { 
-                        uci: "c1b2", san: "Bxb2", comment: "White's sniper bishops are ready",
-                        eval: "-0.8",
-                        candidates: [
-                            { san: "d5!!", games: 6800, eval: "-0.8", w: 22, d: 26, b: 52 },
-                            { san: "Nf6?", games: 1500, eval: "+1.2", w: 62, d: 18, b: 20 }
-                        ]
-                    },
-                    { 
-                        uci: "d7d5", san: "d5!", comment: "5... d5!! - Schlechter Defense! Closes bishop diagonal and wins!",
-                        eval: "-0.8",
-                        candidates: [{ san: "Bxd5", games: 5800, eval: "-0.8", w: 22, d: 26, b: 52 }]
-                    }
-                ]
-            },
-            {
-                id: 4,
-                category: "black_fix",
-                title: "⚫ Black: Countering London System (2...c5 & 4...Qb6!)",
-                tag: "72.7% Loss Rate Fix",
-                side: "black",
-                strategy: "When White plays 2.Bf4, immediately hit with 2...c5! White's bishop left the c1 square, leaving the b2 pawn vulnerable. Playing 4...Qb6 attacks b2 and seizes the initiative.",
-                moves: [
-                    { 
-                        uci: "d2d4", san: "d4", comment: "1. d4",
-                        eval: "+0.3",
-                        candidates: [{ san: "d5", games: 780000, eval: "+0.3", w: 38, d: 34, b: 28 }]
-                    },
-                    { 
-                        uci: "d7d5", san: "d5", comment: "1... d5",
-                        eval: "+0.3",
-                        candidates: [{ san: "Bf4", games: 210000, eval: "+0.2", w: 37, d: 35, b: 28 }]
-                    },
-                    { 
-                        uci: "c1f4", san: "Bf4", comment: "London System",
-                        eval: "+0.1",
-                        candidates: [
-                            { san: "c5!", games: 95000, eval: "+0.0", w: 34, d: 36, b: 30 },
-                            { san: "Nf6", games: 88000, eval: "+0.2", w: 38, d: 35, b: 27 }
-                        ]
-                    },
-                    { 
-                        uci: "c7c5", san: "c5!", comment: "2... c5! - Immediate counter-attack against d4",
-                        eval: "+0.0",
-                        candidates: [{ san: "e3", games: 74000, eval: "+0.0", w: 34, d: 36, b: 30 }]
-                    },
-                    { 
-                        uci: "e2e3", san: "e3", comment: "White defends d4",
-                        eval: "+0.0",
-                        candidates: [{ san: "Nc6", games: 58000, eval: "+0.0", w: 34, d: 36, b: 30 }]
-                    },
-                    { 
-                        uci: "b8c6", san: "Nc6", comment: "3... Nc6 - Pressure d4",
-                        eval: "+0.0",
-                        candidates: [{ san: "Nf3", games: 46000, eval: "+0.0", w: 34, d: 36, b: 30 }]
-                    },
-                    { 
-                        uci: "g1f3", san: "Nf3", comment: "White develops knight",
-                        eval: "-0.2",
-                        candidates: [
-                            { san: "Qb6!", games: 31000, eval: "-0.2", w: 30, d: 35, b: 35 }
-                        ]
-                    },
-                    { 
-                        uci: "d8b6", san: "Qb6!", comment: "4... Qb6! - Double attack on b2 and d4! Black takes control.",
-                        eval: "-0.2",
-                        candidates: [{ san: "Nc3", games: 16000, eval: "-0.2", w: 30, d: 35, b: 35 }]
-                    }
-                ]
-            },
-            {
-                id: 5,
-                category: "black_fix",
-                title: "⚫ Black: Reti Opening Defense (2...d4 Space Wedge)",
-                tag: "83.3% Loss Rate Fix",
-                side: "black",
-                strategy: "When White plays 1.Nf3 d5 2.c4, do NOT trade on c4! Push 2...d4! to cramp White's entire queenside, take away the c3 square from White's knight, and follow up with 3...c5 and 4...Nc6.",
-                moves: [
-                    { 
-                        uci: "g1f3", san: "Nf3", comment: "1. Nf3 (Reti Opening)",
-                        eval: "+0.2",
-                        candidates: [{ san: "d5", games: 420000, eval: "+0.2", w: 36, d: 36, b: 28 }]
-                    },
-                    { 
-                        uci: "d7d5", san: "d5", comment: "1... d5 - Control the center",
-                        eval: "+0.2",
-                        candidates: [{ san: "c4", games: 140000, eval: "+0.1", w: 35, d: 36, b: 29 }]
-                    },
-                    { 
-                        uci: "c2c4", san: "c4", comment: "White challenges d5 from the flank",
-                        eval: "-0.1",
-                        candidates: [
-                            { san: "d4!", games: 72000, eval: "-0.1", w: 32, d: 37, b: 31 },
-                            { san: "c6", games: 38000, eval: "+0.2", w: 37, d: 36, b: 27 },
-                            { san: "dxc4?", games: 22000, eval: "+0.4", w: 41, d: 35, b: 24 }
-                        ]
-                    },
-                    { 
-                        uci: "d5d4", san: "d4!", comment: "2... d4! - Push past! Space wedge stops Nc3 and cramps White.",
-                        eval: "-0.1",
-                        candidates: [{ san: "e3", games: 34000, eval: "-0.1", w: 32, d: 37, b: 31 }]
-                    },
-                    { 
-                        uci: "e2e3", san: "e3", comment: "White attacks d4 pawn",
-                        eval: "-0.1",
-                        candidates: [{ san: "c5", games: 24000, eval: "-0.1", w: 32, d: 37, b: 31 }]
-                    },
-                    { 
-                        uci: "c7c5", san: "c5", comment: "3... c5 - Support the d4 outpost",
-                        eval: "-0.1",
-                        candidates: [{ san: "exd4", games: 18000, eval: "-0.1", w: 32, d: 37, b: 31 }]
-                    },
-                    { 
-                        uci: "e3d4", san: "exd4", comment: "White trades",
-                        eval: "-0.1",
-                        candidates: [{ san: "cxd4", games: 18000, eval: "-0.1", w: 32, d: 37, b: 31 }]
-                    },
-                    { 
-                        uci: "c5d4", san: "cxd4", comment: "4... cxd4 - Black maintains a great central wedge!",
-                        eval: "-0.1",
-                        candidates: [{ san: "d3", games: 12000, eval: "-0.1", w: 32, d: 37, b: 31 }]
-                    }
+                    { uci: "d2d4", san: "d4", comment: "1. d4 - Start with Queen's Pawn", eval: "+0.3", candidates: [{ san: "d4", games: 1845000, eval: "+0.3", w: 38, d: 34, b: 28 }] },
+                    { uci: "e7e5", san: "e5", comment: "Opponent plays Englund Gambit", eval: "+1.6", candidates: [{ san: "dxe5", games: 98000, eval: "+1.6", w: 62, d: 18, b: 20 }] },
+                    { uci: "d4e5", san: "dxe5", comment: "2. dxe5 - Accept the gambit pawn", eval: "+1.6", candidates: [{ san: "Nc6", games: 64000, eval: "+1.6", w: 60, d: 19, b: 21 }] },
+                    { uci: "b8c6", san: "Nc6", comment: "Opponent develops knight", eval: "+1.7", candidates: [{ san: "Nf3", games: 58000, eval: "+1.7", w: 61, d: 19, b: 20 }] },
+                    { uci: "g1f3", san: "Nf3", comment: "3. Nf3 - Guard e5 securely", eval: "+1.7", candidates: [{ san: "Qe7", games: 44000, eval: "+1.7", w: 62, d: 18, b: 20 }] },
+                    { uci: "d8e7", san: "Qe7", comment: "Black attacks e5 again", eval: "+1.8", candidates: [{ san: "Bf4", games: 32000, eval: "+1.8", w: 63, d: 18, b: 19 }] },
+                    { uci: "c1f4", san: "Bf4", comment: "4. Bf4 - Defend e5 and invite the trap", eval: "+1.8", candidates: [{ san: "Qb4+", games: 28000, eval: "+1.8", w: 63, d: 18, b: 19 }] },
+                    { uci: "e7b4", san: "Qb4+", comment: "TRAP MOVE! Black forks King and Bishop", eval: "+3.5", candidates: [{ san: "Bd2!", games: 22000, eval: "+3.5", w: 74, d: 14, b: 12 }] },
+                    { uci: "f4d2", san: "Bd2!", comment: "5. Bd2! - The Winning Move! Never play Qd2", eval: "+3.5", candidates: [{ san: "Qxb2", games: 18000, eval: "+3.5", w: 75, d: 13, b: 12 }] },
+                    { uci: "b4b2", san: "Qxb2", comment: "Black greedily captures on b2", eval: "+3.8", candidates: [{ san: "Nc3!", games: 14000, eval: "+3.8", w: 78, d: 12, b: 10 }] },
+                    { uci: "b1c3", san: "Nc3!", comment: "6. Nc3! - Threatens 7.Rb1 and 7.Nd5! Total victory.", eval: "+3.8", candidates: [{ san: "Bb4", games: 9000, eval: "+3.8", w: 78, d: 12, b: 10 }] }
                 ]
             }
         ];
@@ -1642,8 +1640,8 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('trainer-subtext').innerHTML = `<span class='text-amber-400 font-bold'>💡 Hint:</span> Look for <strong>${expected.san}</strong> (${expected.comment})`;
         }
 
-        // Initialization
         $(document).ready(function() {
+            initSparring();
             initReplayer();
             initTrainer();
         });
@@ -1666,5 +1664,5 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
-    print(f"Generated interactive dashboard with Live Arrows & Study Tracker: {output_path}")
+    print(f"Generated interactive dashboard with Opening Sparring Bot: {output_path}")
     return output_path
