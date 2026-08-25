@@ -1,5 +1,5 @@
 """
-HTML Dashboard & Full Lichess-Style Opening Explorer, Trainer & Stockfish Engine Analyzer
+HTML Dashboard & Full Lichess-Style Opening Explorer, Trainer & Stockfish Engine with Live Arrows & Study Tracker
 """
 import json
 import os
@@ -24,7 +24,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess.com Diagnostics & Stockfish Engine - __USERNAME__</title>
+    <title>Chess Diagnostics & Study Tracker - __USERNAME__</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -35,7 +35,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .tab-btn.active { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 600; }
-        .board-container { max-width: 420px; width: 100%; margin: 0 auto; }
+        .board-container { max-width: 420px; width: 100%; margin: 0 auto; position: relative; }
         .trainer-card.active { border-color: #38bdf8; background-color: #0369a120; }
         .eval-bar-container { display: flex; height: 16px; width: 100%; border-radius: 3px; overflow: hidden; font-size: 10px; line-height: 16px; font-weight: 600; text-align: center; }
         .bar-white { background-color: #f1f5f9; color: #0f172a; }
@@ -51,10 +51,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <span class="text-3xl">♟️</span>
             <div>
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    Chess Diagnostics & Stockfish 18 Engine
+                    Chess Diagnostics & Study Tracker
                     <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded font-mono">__USERNAME__</span>
                 </h1>
-                <p class="text-xs text-slate-400">Deep Stockfish Blunder Detection, Move-by-Move Evaluations & Lichess Explorer</p>
+                <p class="text-xs text-slate-400">Stockfish 18 Engine, Live Move Arrows, Study Tracker & Lichess Explorer</p>
             </div>
         </div>
         <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
@@ -73,7 +73,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Navigation Tabs -->
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6">
         <nav class="flex space-x-8 text-sm">
-            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">⚡ Stockfish Lost Games Replayer</button>
+            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">⚡ Stockfish Lost Games Replayer & Study Tracker</button>
             <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎯 Lichess-Style Explorer & Trainer</button>
             <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">📊 Top 10 Win/Loss Openings</button>
             <button onclick="switchTab('videos')" id="tab-videos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎥 Master Video Lessons</button>
@@ -84,29 +84,86 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6">
 
-        <!-- TAB 1: STOCKFISH EARLY DISASTER REPLAYER -->
+        <!-- TAB 1: STOCKFISH EARLY DISASTER REPLAYER & STUDY TRACKER -->
         <section id="view-disasters" class="space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Left: Board & Engine Bar -->
-                <div class="lg:col-span-5 flex flex-col items-center">
-                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700">
-                        <div id="replay-board" style="width: 100%"></div>
+
+            <!-- STUDY PROGRESS BANNER -->
+            <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl text-emerald-400 font-bold">
+                        ✓
                     </div>
-                    <!-- Navigation Controls -->
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Losses Study Progress</div>
+                        <div class="text-base font-bold text-white flex items-center gap-2">
+                            <span id="study-count-text">0 / 40 Studied</span>
+                            <span id="study-pct-badge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">0% Complete</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="flex-1 max-w-xs bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-700">
+                    <div id="study-progress-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="flex items-center gap-1.5 text-xs">
+                    <button onclick="filterStudiedGames('all')" id="btn-filter-all" class="px-2.5 py-1 bg-sky-600 rounded text-white font-medium">All (<span id="cnt-all">40</span>)</button>
+                    <button onclick="filterStudiedGames('unstudied')" id="btn-filter-unstudied" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300 font-medium">⏳ Unstudied (<span id="cnt-unstudied">40</span>)</button>
+                    <button onclick="filterStudiedGames('studied')" id="btn-filter-studied" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300 font-medium">✅ Studied (<span id="cnt-studied">0</span>)</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Board, Arrow SVG Overlay & Controls -->
+                <div class="lg:col-span-5 flex flex-col items-center">
+                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700 relative">
+                        <div id="replay-board" style="width: 100%"></div>
+                        <!-- SVG ARROW OVERLAY -->
+                        <svg id="replay-arrows-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10" style="width: 100%; height: 100%;">
+                            <defs>
+                                <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                                </marker>
+                                <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                                </marker>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <!-- Navigation Controls & Arrow Toggle -->
                     <div class="flex items-center gap-2 mt-4">
                         <button onclick="replayFirst()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">|&lt;</button>
                         <button onclick="replayPrev()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&lt; Prev</button>
                         <button onclick="replayNext()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-semibold">Next &gt;</button>
                         <button onclick="replayLast()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&gt;|</button>
                     </div>
-                    <div id="replay-status" class="text-xs text-slate-400 mt-2 font-mono">Move 0 / 0</div>
+
+                    <div class="flex items-center justify-between w-full max-w-[420px] mt-2 px-1">
+                        <div id="replay-status" class="text-xs text-slate-400 font-mono">Move 0 / 0</div>
+                        <button onclick="toggleArrowDisplay()" id="btn-arrow-toggle" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-emerald-500/40">
+                            <span>🎯</span> Arrow: ON
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Right: Game Selector, Move Quality & Stockfish Live Panel -->
+                <!-- Right: Game Selector, Study Actions, Stockfish Panel & Notes -->
                 <div class="lg:col-span-7 space-y-4">
                     <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Select Lost Game (Analyzed with Stockfish 18):</label>
-                        <select id="game-select" onchange="loadSelectedGame(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500"></select>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs font-semibold text-slate-400 uppercase">Select Lost Game:</label>
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleCurrentGameStudied()" id="btn-toggle-study" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5">
+                                    <span>✅</span> Mark as Studied
+                                </button>
+                                <button onclick="jumpNextUnstudied()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg transition">
+                                    ⏭️ Next Unstudied
+                                </button>
+                            </div>
+                        </div>
+                        <select id="game-select" onchange="loadSelectedGame(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500 font-mono"></select>
 
                         <div id="game-meta-card" class="bg-slate-900/70 p-3.5 rounded-lg border border-slate-700 mt-3 text-xs space-y-1">
                             <div><strong>Opening:</strong> <span id="meta-opening" class="text-sky-400"></span></div>
@@ -116,15 +173,23 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
                         <!-- Move List with Quality Badges -->
                         <div class="mt-3">
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to inspect with Stockfish):</label>
-                            <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-32 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to inspect Stockfish & Arrows):</label>
+                            <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-28 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
+                        </div>
+
+                        <!-- Personal Study Notes Input -->
+                        <div class="mt-3 pt-3 border-t border-slate-700/60">
+                            <label class="block text-[11px] font-bold text-amber-400 uppercase mb-1 flex items-center gap-1">
+                                <span>📝</span> My Study Notes for this Game:
+                            </label>
+                            <input type="text" id="game-user-note" oninput="saveCurrentGameNote(this.value)" placeholder="e.g. In Englund, remember 5.Bd2! and 6.Nc3!..." class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 focus:border-amber-400 focus:outline-none">
                         </div>
                     </div>
 
                     <!-- STOCKFISH 18 LIVE ENGINE EVALUATION CARD -->
-                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border-2 border-sky-500/40 p-5 space-y-3 shadow-xl">
+                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border-2 border-sky-500/40 p-4 space-y-3 shadow-xl">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-bold text-sky-400 flex items-center gap-2">
+                            <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-2">
                                 <span>🤖</span> Stockfish 18 Engine Analysis
                             </h3>
                             <span id="sf-eval-badge" class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2.5 py-0.5 rounded font-mono font-bold">Eval: 0.0</span>
@@ -132,21 +197,21 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
                         <!-- Move Comparison Grid -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div class="bg-slate-900/90 border border-slate-700 p-3 rounded-lg">
+                            <div class="bg-slate-900/90 border border-slate-700 p-2.5 rounded-lg">
                                 <div class="font-bold text-slate-400 uppercase text-[10px] mb-1">Move Played in Game</div>
                                 <div class="flex items-center gap-2">
                                     <span id="sf-played-move" class="font-mono text-sm text-slate-100 font-bold">--</span>
                                     <span id="sf-quality-badge" class="text-[10px] px-2 py-0.5 rounded font-mono font-semibold border">--</span>
                                 </div>
                             </div>
-                            <div class="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg">
+                            <div class="bg-emerald-950/40 border border-emerald-800/60 p-2.5 rounded-lg">
                                 <div class="font-bold text-emerald-400 uppercase text-[10px] mb-1">🟢 Stockfish Recommended Best Move</div>
                                 <div id="sf-best-move" class="font-mono text-sm text-emerald-300 font-bold">--</div>
                             </div>
                         </div>
 
                         <!-- Engine Best Continuation Line (PV) -->
-                        <div class="bg-slate-900/80 border border-slate-700 p-3 rounded-lg text-xs space-y-1">
+                        <div class="bg-slate-900/80 border border-slate-700 p-2.5 rounded-lg text-xs space-y-1">
                             <strong class="text-slate-400 font-bold uppercase text-[10px] tracking-wide block">Engine Best Continuation (PV Line):</strong>
                             <p id="sf-pv-line" class="font-mono text-slate-200 leading-relaxed text-[11px]">--</p>
                         </div>
@@ -611,10 +676,277 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('tab-' + tabId).classList.add('active');
 
             if (tabId === 'disasters') {
-                setTimeout(() => { if (replayBoard) replayBoard.resize(); }, 100);
+                setTimeout(() => { 
+                    if (replayBoard) replayBoard.resize(); 
+                    renderReplayArrows();
+                }, 100);
             } else if (tabId === 'trainer') {
                 setTimeout(() => { if (trainerBoard) trainerBoard.resize(); }, 100);
             }
+        }
+
+        // ==========================================
+        // PERSISTENT STUDY PROGRESS TRACKER
+        // ==========================================
+        const STORAGE_KEY_STUDIED = `chess_studied_${analysisData.username}`;
+        const STORAGE_KEY_NOTES = `chess_notes_${analysisData.username}`;
+
+        function getStudiedSet() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_STUDIED);
+                return new Set(raw ? JSON.parse(raw) : []);
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function saveStudiedSet(studiedSet) {
+            try {
+                localStorage.setItem(STORAGE_KEY_STUDIED, JSON.stringify(Array.from(studiedSet)));
+            } catch (e) {}
+        }
+
+        function getNotesDict() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_NOTES);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveNotesDict(notesDict) {
+            try {
+                localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notesDict));
+            } catch (e) {}
+        }
+
+        let currentStudyFilter = "all";
+
+        function updateStudyProgressUI() {
+            const studiedSet = getStudiedSet();
+            const totalCount = analysisData.early_disasters.length;
+            const studiedCount = Array.from(studiedSet).filter(idx => idx >= 0 && idx < totalCount).length;
+            const unstudiedCount = totalCount - studiedCount;
+            const pct = totalCount > 0 ? Math.round((studiedCount / totalCount) * 100) : 0;
+
+            document.getElementById('study-count-text').innerText = `${studiedCount} / ${totalCount} Studied`;
+            document.getElementById('study-pct-badge').innerText = `${pct}% Complete`;
+            document.getElementById('study-progress-bar').style.width = `${pct}%`;
+
+            document.getElementById('cnt-all').innerText = totalCount;
+            document.getElementById('cnt-unstudied').innerText = unstudiedCount;
+            document.getElementById('cnt-studied').innerText = studiedCount;
+
+            // Update Current Game Studied Button
+            const btn = document.getElementById('btn-toggle-study');
+            if (studiedSet.has(currentGameIndex)) {
+                btn.innerHTML = `<span>✓</span> Studied (Click to Unmark)`;
+                btn.className = `px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5 border border-emerald-400`;
+            } else {
+                btn.innerHTML = `<span>✅</span> Mark as Studied`;
+                btn.className = `px-3 py-1 bg-slate-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1.5`;
+            }
+
+            renderGameSelectorOptions();
+        }
+
+        function toggleCurrentGameStudied() {
+            const studiedSet = getStudiedSet();
+            if (studiedSet.has(currentGameIndex)) {
+                studiedSet.delete(currentGameIndex);
+            } else {
+                studiedSet.add(currentGameIndex);
+            }
+            saveStudiedSet(studiedSet);
+            updateStudyProgressUI();
+        }
+
+        function filterStudiedGames(filter) {
+            currentStudyFilter = filter;
+            ['all', 'unstudied', 'studied'].forEach(f => {
+                const btn = document.getElementById('btn-filter-' + f);
+                if (btn) {
+                    btn.className = (f === filter) ? 'px-2.5 py-1 bg-sky-600 rounded text-white font-medium' : 'px-2.5 py-1 bg-slate-900 hover:bg-slate-700 rounded text-slate-300 font-medium';
+                }
+            });
+            renderGameSelectorOptions();
+        }
+
+        function renderGameSelectorOptions() {
+            const studiedSet = getStudiedSet();
+            const select = document.getElementById('game-select');
+            const total = analysisData.early_disasters.length;
+
+            let html = "";
+            for (let idx = 0; idx < total; idx++) {
+                const g = analysisData.early_disasters[idx];
+                const isStudied = studiedSet.has(idx);
+
+                if (currentStudyFilter === "unstudied" && isStudied) continue;
+                if (currentStudyFilter === "studied" && !isStudied) continue;
+
+                const icon = isStudied ? "✅" : "⏳";
+                const isSelected = (idx === currentGameIndex) ? "selected" : "";
+                html += `<option value="${idx}" ${isSelected}>${icon} ${idx+1}. [${g.moves_count} moves] vs ${g.opp_name} (${g.opp_rating || '?'}) - ${g.opening}</option>`;
+            }
+
+            if (!html) {
+                html = `<option value="">No games found in this filter</option>`;
+            }
+            select.innerHTML = html;
+        }
+
+        function jumpNextUnstudied() {
+            const studiedSet = getStudiedSet();
+            const total = analysisData.early_disasters.length;
+            
+            for (let idx = currentGameIndex + 1; idx < total; idx++) {
+                if (!studiedSet.has(idx)) {
+                    loadSelectedGame(idx);
+                    return;
+                }
+            }
+            for (let idx = 0; idx <= currentGameIndex; idx++) {
+                if (!studiedSet.has(idx)) {
+                    loadSelectedGame(idx);
+                    return;
+                }
+            }
+            alert("🎉 Amazing! You have studied all 40 lost games in this dataset!");
+        }
+
+        function saveCurrentGameNote(noteText) {
+            const notesDict = getNotesDict();
+            notesDict[currentGameIndex] = noteText;
+            saveNotesDict(notesDict);
+        }
+
+        function loadCurrentGameNote() {
+            const notesDict = getNotesDict();
+            const noteInput = document.getElementById('game-user-note');
+            noteInput.value = notesDict[currentGameIndex] || "";
+        }
+
+        // ==========================================
+        // STOCKFISH ARROW DRAWING ENGINE
+        // ==========================================
+        let showArrows = true;
+
+        function toggleArrowDisplay() {
+            showArrows = !showArrows;
+            const btn = document.getElementById('btn-arrow-toggle');
+            if (showArrows) {
+                btn.innerHTML = `<span>🎯</span> Arrow: ON`;
+                btn.className = `text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-emerald-500/40`;
+            } else {
+                btn.innerHTML = `<span>🎯</span> Arrow: OFF`;
+                btn.className = `text-xs text-slate-400 hover:text-slate-300 font-semibold flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700`;
+            }
+            renderReplayArrows();
+        }
+
+        function getSquareCenter(square, orientation, boardWidth) {
+            if (!square || square.length < 2) return null;
+            const sqSize = boardWidth / 8.0;
+            const files = 'abcdefgh';
+            const fileIdx = files.indexOf(square[0].toLowerCase());
+            const rankNum = parseInt(square[1]);
+
+            if (fileIdx === -1 || isNaN(rankNum) || rankNum < 1 || rankNum > 8) return null;
+
+            let x, y;
+            if (orientation === 'white') {
+                x = (fileIdx + 0.5) * sqSize;
+                y = (8 - rankNum + 0.5) * sqSize;
+            } else {
+                x = (7 - fileIdx + 0.5) * sqSize;
+                y = (rankNum - 1 + 0.5) * sqSize;
+            }
+            return { x, y, sqSize };
+        }
+
+        function drawSvgArrow(fromSq, toSq, color, markerId, orientation, boardWidth, isDashed = false) {
+            const p1 = getSquareCenter(fromSq, orientation, boardWidth);
+            const p2 = getSquareCenter(toSq, orientation, boardWidth);
+            if (!p1 || !p2) return "";
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist === 0) return "";
+
+            const shorten = p1.sqSize * 0.28;
+            const targetX = p2.x - (dx / dist) * shorten;
+            const targetY = p2.y - (dy / dist) * shorten;
+
+            const strokeWidth = p1.sqSize * 0.16;
+            const radius = p1.sqSize * 0.12;
+            const dashAttr = isDashed ? 'stroke-dasharray="6,4"' : '';
+
+            return `
+                <circle cx="${p1.x}" cy="${p1.y}" r="${radius}" fill="${color}" opacity="0.85" />
+                <line x1="${p1.x}" y1="${p1.y}" x2="${targetX}" y2="${targetY}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" marker-end="url(#${markerId})" opacity="0.85" ${dashAttr} />
+            `;
+        }
+
+        function renderReplayArrows() {
+            const svg = document.getElementById('replay-arrows-svg');
+            if (!svg) return;
+
+            if (!showArrows) {
+                svg.innerHTML = `
+                    <defs>
+                        <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                        </marker>
+                        <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                        </marker>
+                    </defs>
+                `;
+                return;
+            }
+
+            const g = analysisData.early_disasters[currentGameIndex];
+            if (!g) return;
+
+            const boardEl = document.getElementById('replay-board');
+            const boardWidth = boardEl ? boardEl.clientWidth : 420;
+            const orientation = g.color.toLowerCase();
+            const sfList = g.stockfish_analysis || [];
+
+            let arrowsHtml = `
+                <defs>
+                    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                    </marker>
+                    <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ef4444" />
+                    </marker>
+                </defs>
+            `;
+
+            // When viewing a specific move
+            if (currentPly > 0 && currentPly <= sfList.length) {
+                const plyData = sfList[currentPly - 1];
+
+                // If inaccuracy/blunder was played, draw red arrow for played move
+                if (plyData.played_uci && (plyData.quality === 'Blunder' || plyData.quality === 'Mistake' || plyData.quality === 'Inaccuracy')) {
+                    const fromSq = plyData.played_uci.substring(0, 2);
+                    const toSq = plyData.played_uci.substring(2, 4);
+                    arrowsHtml += drawSvgArrow(fromSq, toSq, "#ef4444", "arrow-red", orientation, boardWidth, true);
+                }
+
+                // Draw bold green arrow for Stockfish Best Move
+                if (plyData.best_uci) {
+                    const fromSq = plyData.best_uci.substring(0, 2);
+                    const toSq = plyData.best_uci.substring(2, 4);
+                    arrowsHtml += drawSvgArrow(fromSq, toSq, "#22c55e", "arrow-green", orientation, boardWidth, false);
+                }
+            }
+
+            svg.innerHTML = arrowsHtml;
         }
 
         // ==========================================
@@ -626,22 +958,25 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         let currentFens = [];
 
         function initReplayer() {
-            const select = document.getElementById('game-select');
-            select.innerHTML = analysisData.early_disasters.map((g, idx) => `
-                <option value="${idx}">${idx+1}. [${g.moves_count} moves] vs ${g.opp_name} (${g.opp_rating || '?'}) - ${g.opening}</option>
-            `).join('');
-
             replayBoard = Chessboard('replay-board', {
                 position: 'start',
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
             });
 
+            updateStudyProgressUI();
+
             if (analysisData.early_disasters.length > 0) {
                 loadSelectedGame(0);
             }
+
+            window.addEventListener('resize', () => {
+                if (replayBoard) replayBoard.resize();
+                renderReplayArrows();
+            });
         }
 
         function loadSelectedGame(idx) {
+            if (idx === "" || idx === null || isNaN(idx)) return;
             currentGameIndex = parseInt(idx);
             const g = analysisData.early_disasters[currentGameIndex];
             if (!g) return;
@@ -658,6 +993,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 document.getElementById('coach-explanation').innerText = g.coach_advice.explanation;
                 document.getElementById('coach-ply-tag').innerText = `Critical Move: Move ${g.coach_advice.move_num}`;
             }
+
+            loadCurrentGameNote();
+            updateStudyProgressUI();
 
             currentFens = g.fens;
             currentPly = 0;
@@ -721,6 +1059,8 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 document.getElementById('sf-best-move').innerText = "1. e4 / 1. d4 / 1. Nf3";
                 document.getElementById('sf-pv-line').innerText = "Standard opening development";
             }
+
+            renderReplayArrows();
         }
 
         function replayNext() {
@@ -1326,5 +1666,5 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
-    print(f"Generated interactive dashboard with Stockfish: {output_path}")
+    print(f"Generated interactive dashboard with Live Arrows & Study Tracker: {output_path}")
     return output_path

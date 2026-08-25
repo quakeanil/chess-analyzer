@@ -1,6 +1,6 @@
 """
 Stockfish 18 Engine Analyzer for Chess Games
-Provides deep move-by-move evaluations, blunder detection, and best move recommendations.
+Provides deep move-by-move evaluations, blunder detection, UCI coordinates for arrows, and best move recommendations.
 """
 import os
 import shutil
@@ -10,24 +10,20 @@ import chess.engine
 
 def find_stockfish():
     """Locates the Stockfish binary on the system."""
-    # 1. Check if stockfish is in PATH
     path = shutil.which("stockfish") or shutil.which("stockfish.exe")
     if path and os.path.exists(path):
         return path
         
-    # 2. Check WinGet Packages directory
     winget_pattern = os.path.expanduser(r"~\AppData\Local\Microsoft\WinGet\Packages\*Stockfish*/**/stockfish*.exe")
     matches = glob.glob(winget_pattern, recursive=True)
     if matches:
         return matches[0]
         
-    # 3. Check Program Files
     prog_pattern = r"C:\Program Files\**\stockfish*.exe"
     matches = glob.glob(prog_pattern, recursive=True)
     if matches:
         return matches[0]
         
-    # 4. Check local project directory
     local_bin = os.path.join(os.path.dirname(__file__), "..", "bin", "stockfish.exe")
     if os.path.exists(local_bin):
         return local_bin
@@ -35,7 +31,6 @@ def find_stockfish():
     return None
 
 def score_to_str(score_obj, is_white_perspective=True):
-    """Converts a chess.engine Score object to a human-readable string like +1.5 or #2 (mate)."""
     if score_obj is None:
         return "0.0"
     
@@ -56,7 +51,6 @@ def score_to_str(score_obj, is_white_perspective=True):
     return f"{val:+.1f}"
 
 def score_to_cp(score_obj, is_white_perspective=True):
-    """Returns numerical score in centipawns for blunder math."""
     if score_obj is None:
         return 0
     score = score_obj.white() if is_white_perspective else score_obj.black()
@@ -65,10 +59,6 @@ def score_to_cp(score_obj, is_white_perspective=True):
     return score.score() or 0
 
 def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
-    """
-    Runs Stockfish analysis across all moves of a game.
-    Attaches move-by-move evaluations, quality tags, and engine best moves.
-    """
     if not engine_path or not os.path.exists(engine_path):
         return game_summary
 
@@ -85,7 +75,6 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
 
     analysis_per_ply = []
     
-    # Analyze start position
     start_info = engine.analyse(board, chess.engine.Limit(depth=depth))
     prev_score = start_info.get("score")
     
@@ -93,14 +82,12 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
         is_my_move = (i % 2 == 0 if is_my_turn_first else i % 2 == 1)
         move_num = (i // 2) + 1
         
-        # Best move before playing
         best_move_obj = None
         pv_san_list = []
         try:
             info_before = engine.analyse(board, chess.engine.Limit(depth=depth))
             if "pv" in info_before and len(info_before["pv"]) > 0:
                 best_move_obj = info_before["pv"][0]
-                # Extract PV line in SAN
                 temp_board = board.copy()
                 for pv_m in info_before["pv"][:5]:
                     pv_san_list.append(temp_board.san(pv_m))
@@ -109,17 +96,18 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
             pass
 
         best_move_san = board.san(best_move_obj) if best_move_obj else san_move
+        best_uci = best_move_obj.uci() if best_move_obj else None
+        
         eval_before_str = score_to_str(prev_score, is_white_perspective=True)
         eval_before_cp = score_to_cp(prev_score, is_white_perspective=(i % 2 == 0))
 
-        # Push the actual played move
         try:
             actual_move_obj = board.parse_san(san_move)
+            played_uci = actual_move_obj.uci()
             board.push(actual_move_obj)
         except Exception:
             break
 
-        # Eval after move
         try:
             info_after = engine.analyse(board, chess.engine.Limit(depth=depth))
             cur_score = info_after.get("score")
@@ -130,10 +118,8 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
             eval_after_str = eval_before_str
             eval_after_cp = eval_before_cp
 
-        # Calculate eval loss for the player who just moved
         cp_diff = eval_before_cp - eval_after_cp
         
-        # Classify move quality
         if cp_diff <= 15:
             quality = "Best Move"
             badge = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -155,7 +141,9 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
             "move_num": move_num,
             "is_my_move": is_my_move,
             "played_san": san_move,
+            "played_uci": played_uci,
             "best_san": best_move_san,
+            "best_uci": best_uci,
             "eval_str": eval_after_str,
             "eval_loss_cp": cp_diff,
             "quality": quality,
