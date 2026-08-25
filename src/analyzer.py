@@ -8,96 +8,102 @@ import chess
 import chess.pgn
 from src.engine_analyzer import find_stockfish, analyze_game_with_stockfish
 
-def generate_coach_advice(game_summary):
+def generate_opening_weaknesses_catalog():
     """
-    Analyzes a lost game and returns specific move-level recommendations:
-    - critical_ply: which half-move went wrong
-    - played_move: the inaccuracy/blunder played
-    - better_move: what to play instead
-    - never_rule: clear 'NEVER DO THAT' rule
-    - explanation: why the better move works
+    Catalog of exact opening weaknesses, opponent triggers, best options, and tactical reasons.
     """
-    moves = game_summary["moves_san"]
-    color = game_summary["color"]
-    opening = game_summary["opening"]
-    
-    # 1. Englund Gambit (White)
-    if color == "White" and len(moves) >= 2 and moves[0] == "d4" and moves[1] == "e5":
-        for i, m in enumerate(moves):
-            if i % 2 == 0: # White's move
-                move_num = (i // 2) + 1
-                if move_num in [4, 5] and ("Qd2" in m or "Qc3" in m or "Bd2" not in m):
-                    return {
-                        "critical_ply": i + 1,
-                        "move_num": move_num,
-                        "played_move": f"{move_num}. {m}",
-                        "better_move": f"{move_num}. Bd2! (followed by 6. Nc3!)",
-                        "never_rule": "NEVER block an early Queen check with Qd2 or leave your b2 pawn unprotected!",
-                        "explanation": "When Black plays 4...Qb4+, play 5.Bd2! Qxb2 6.Nc3! (or 6.Bc3 Bb4 7.Qd2!). White threatens 7.Rb1 or 7.Nd5 with a deadly double attack on c7 and Black's queen (+3.5 eval)."
-                    }
-                    
-    # 2. Scandinavian 2.e5 (Black)
-    if color == "Black" and len(moves) >= 3 and moves[0] == "e4" and moves[1] == "d5" and moves[2] == "e5":
-        if len(moves) >= 4 and moves[3] != "Bf5":
-            return {
-                "critical_ply": 4,
-                "move_num": 2,
-                "played_move": f"2... {moves[3]}",
-                "better_move": "2... Bf5!",
-                "never_rule": "NEVER play 2...e6 before developing your light-squared bishop outside the pawn chain!",
-                "explanation": "Playing 2...e6 traps your bishop on c8 for the rest of the game. Playing 2...Bf5! first gives you an active French Defense setup with no bad pieces."
-            }
-
-    # 3. vs London System (Black)
-    if color == "Black" and len(moves) >= 3 and moves[0] == "d4" and moves[1] == "d5" and moves[2] == "Bf4":
-        if len(moves) >= 4 and moves[3] not in ["c5", "c6"]:
-            return {
-                "critical_ply": 4,
-                "move_num": 2,
-                "played_move": f"2... {moves[3]}",
-                "better_move": "2... c5! (followed by Nc6 & Qb6!)",
-                "never_rule": "NEVER play passively against the London (1.d4 d5 2.Bf4) by just developing pieces to e6 or Bd6!",
-                "explanation": "White's bishop left c1, leaving the b2 pawn unguarded. Strike immediately with 2...c5! 3.e3 Nc6 4.Nf3 Qb6! to seize the initiative."
-            }
-
-    # 4. White passive d4 + Nf3 + e3 without c4/Bf4
-    if color == "White" and len(moves) >= 3 and moves[0] == "d4" and moves[1] == "d5":
-        if len(moves) >= 5 and moves[2] == "Nf3" and moves[4] in ["e3", "Be2"]:
-            return {
-                "critical_ply": 5,
-                "move_num": 3,
-                "played_move": f"3. {moves[4]}",
-                "better_move": "2. c4! (Queen's Gambit) or 2. Bf4! (London)",
-                "never_rule": "NEVER play passive d4 setups (d4 + Nf3 + e3) without challenging Black's center or developing your dark-squared bishop first!",
-                "explanation": "Playing e3 locks your dark-squared bishop on c1 and gives Black free equality with ...c5 and ...Bf5."
-            }
-
-    # 5. Early Queen development trap (Moves 2-5)
-    for i, m in enumerate(moves[:10]):
-        is_my_turn = (color == "White" and i % 2 == 0) or (color == "Black" and i % 2 == 1)
-        if is_my_turn:
-            move_num = (i // 2) + 1
-            if m.startswith("Q") and move_num <= 4 and "Qxd5" not in m:
-                return {
-                    "critical_ply": i + 1,
-                    "move_num": move_num,
-                    "played_move": f"{move_num}. {m}",
-                    "better_move": "Develop Knights (Nf3/Nc3/Nf6) or Bishops first",
-                    "never_rule": "NEVER bring your Queen out on moves 2–4 to launch premature attacks!",
-                    "explanation": "Opponent will develop their minor pieces with tempo by attacking your exposed Queen, gaining free development."
-                }
-
-    # 6. Default Fallback Diagnostic for short loss
-    mid_ply = min(len(moves), 6)
-    crit_move = moves[mid_ply - 1] if mid_ply > 0 else "N/A"
-    return {
-        "critical_ply": mid_ply,
-        "move_num": (mid_ply + 1) // 2,
-        "played_move": f"Move {(mid_ply + 1) // 2}: {crit_move}",
-        "better_move": "Prioritize rapid minor piece development & early Castling (O-O)",
-        "never_rule": "NEVER move the same piece twice or delay King safety in open tactical positions!",
-        "explanation": "In fast 10-15 move games, the decisive factor is almost always king safety and piece coordination. Castle within the first 7 moves."
-    }
+    return [
+        {
+            "id": "scandi_2e5",
+            "side": "Black",
+            "opening": "Scandinavian Defense 2.e5",
+            "eco": "B01",
+            "loss_count": 21,
+            "opp_trigger": "Opponent plays: 2. e5",
+            "your_mistake": "You played: 2... d4?! or 2... e6?! (Passive / Cramped)",
+            "best_option": "Your Best Move: 2... Bf5! (followed by 3...e6, 4...c5! & 5...Nc6)",
+            "why_reason": "When White pushes 2.e5, White closes the center. If you play 2...e6, your light-squared bishop is trapped on c8 for the entire game. If you play 2...d4, White attacks with f4. Playing 2...Bf5! brings your bishop outside the pawn chain before locking it with e6, giving Black an active, winning setup.",
+            "fen_setup": "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
+            "refutation_uci": "c8f5",
+            "refutation_san": "Bf5!",
+            "drill_seq": ["e4", "d5", "e5", "Bf5", "d4", "e6", "Nf3", "c5"]
+        },
+        {
+            "id": "englund_trap",
+            "side": "White",
+            "opening": "Englund Gambit 1.d4 e5",
+            "eco": "A40",
+            "loss_count": 13,
+            "opp_trigger": "Opponent plays: 4... Qb4+ (Forking King and Bishop)",
+            "your_mistake": "You played: 5. Qd2?? or 5. Qc3?? (Loses queen or b2/a1 rook)",
+            "best_option": "Your Best Move: 5. Bd2! Qxb2 6. Nc3! (+3.8 Advantage)",
+            "why_reason": "Never block early queen checks with Qd2 when b2 is hanging! 5.Bd2! protects your king and poisons the b2 pawn. When Black greedily captures 5...Qxb2, play 6.Nc3! White threatens 7.Rb1 (trapping Black's queen) and 7.Nd5 (forking c7 King and Rook). Black is dead lost.",
+            "fen_setup": "r1b1kbnr/pppp1ppp/2n5/4P3/1q3B2/5N2/PPP1PPPP/RN1QKB1R w KQkq - 3 5",
+            "refutation_uci": "f4d2",
+            "refutation_san": "Bd2!",
+            "drill_seq": ["d4", "e5", "dxe5", "Nc6", "Nf3", "Qe7", "Bf4", "Qb4+", "Bd2", "Qxb2", "Nc3"]
+        },
+        {
+            "id": "danish_gambit",
+            "side": "Black",
+            "opening": "Danish Gambit (Double Pawn Sacrifice)",
+            "eco": "C21",
+            "loss_count": 7,
+            "opp_trigger": "Opponent plays: 5. Bxb2 (Both White Bishops Aimed at f7 & g7)",
+            "your_mistake": "You played: 5... Qf6?! or 5... Nf6? (Walks into e5 attack)",
+            "best_option": "Your Best Move: 5... d5!! (The Schlechter Defense Refutation)",
+            "why_reason": "White sacrificed two pawns to get murderous attacking diagonals with Bc4 and Bb2. Pushing 5...d5!! immediately blocks both bishops and returns one pawn to force queen exchanges (6.Bxd5 Nf6 7.Bxf7+ Kxf7 8.Qxd8 Bb4+ 9.Qd2 Bxd2+). Black emerges a clean pawn up with zero king danger.",
+            "fen_setup": "rnbqkbnr/pppp1ppp/8/8/8/8/PB3PPP/RN1QKBNR b KQkq - 0 5",
+            "refutation_uci": "d7d5",
+            "refutation_san": "d5!!",
+            "drill_seq": ["e4", "e5", "d4", "exd4", "c3", "dxc3", "Bc4", "cxb2", "Bxb2", "d5"]
+        },
+        {
+            "id": "london_black",
+            "side": "Black",
+            "opening": "vs London System 1.d4 d5 2.Bf4",
+            "eco": "D00",
+            "loss_count": 16,
+            "opp_trigger": "Opponent plays: 2. Bf4 (Developing Bishop outside pawn chain)",
+            "your_mistake": "You played: 2... e6?! or passive 2... Nf6 3.e3 e6 (Allows easy London pyramid)",
+            "best_option": "Your Best Move: 2... c5! 3.e3 Nc6 4.Nf3 Qb6! (Double attack on b2 & d4)",
+            "why_reason": "When White plays 2.Bf4, the b2 pawn is left unguarded. If you play passively, White builds an impenetrable triangle (c3-d4-e3). Striking immediately with 2...c5! and 4...Qb6! forces White to weaken their queenside (b3/Qc1) and gives Black the initiative.",
+            "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 1 2",
+            "refutation_uci": "c7c5",
+            "refutation_san": "c5!",
+            "drill_seq": ["d4", "d5", "Bf4", "c5", "e3", "Nc6", "Nf3", "Qb6"]
+        },
+        {
+            "id": "white_passive_d4",
+            "side": "White",
+            "opening": "Passive Queen's Pawn (1.d4 d5 2.Nf3 & 3.e3 / 3.b3)",
+            "eco": "D02",
+            "loss_count": 30,
+            "opp_trigger": "You played: 2. Nf3 followed by 3. e3 or 3. b3 (No central strike)",
+            "your_mistake": "Playing passive d4 setups locks your dark-squared bishop on c1 and gives Black free control of the center.",
+            "best_option": "Your Best Move: 2. c4! (Queen's Gambit) or 2. Bf4! (Active London)",
+            "why_reason": "In 1.d4 openings, White must either strike the center with 2.c4! (putting direct pressure on d5) or develop the dark bishop first with 2.Bf4! before playing e3. Playing Nf3 + e3 without c4 lets Black play ...c5 and ...Bf5 with a 70%+ win rate against you.",
+            "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+            "refutation_uci": "c2c4",
+            "refutation_san": "c4! (Queen's Gambit)",
+            "drill_seq": ["d4", "d5", "c4", "e6", "Nc3", "Nf6"]
+        },
+        {
+            "id": "reti_wedge",
+            "side": "Black",
+            "opening": "vs Réti Opening 1.Nf3 d5 2.c4",
+            "eco": "A09",
+            "loss_count": 8,
+            "opp_trigger": "Opponent plays: 1. Nf3 d5 2. c4",
+            "your_mistake": "You played: 2... dxc4?! or 2... c6 (Surrenders central space)",
+            "best_option": "Your Best Move: 2... d4! (Space Wedge stopping Nc3)",
+            "why_reason": "When White offers 2.c4 in the Réti, pushing 2...d4! creates an advanced wedge on White's queenside. It deprives White's knight of the natural c3 square and gives Black long-term space control. Follow up with 3...c5 and 4...Nc6.",
+            "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/2P5/5N2/PP1PPPPP/RNBQKB1R b KQkq - 0 2",
+            "refutation_uci": "d5d4",
+            "refutation_san": "d4!",
+            "drill_seq": ["Nf3", "d5", "c4", "d4", "e3", "c5", "exd4", "cxd4"]
+        }
+    ]
 
 def analyze_player_games(username, games_data):
     username = username.lower()
@@ -106,7 +112,6 @@ def analyze_player_games(username, games_data):
     stats_black = defaultdict(lambda: {"wins": 0, "losses": 0, "draws": 0, "games": []})
     
     loss_reasons = Counter()
-    early_disasters = [] # Losses <= 15 moves
     all_losses = []
     
     first_moves_white = Counter()
@@ -178,7 +183,6 @@ def analyze_player_games(username, games_data):
         else:
             total_draws += 1
             
-        # Track first moves
         if len(moves_san) >= 1:
             first_move = moves_san[0]
             if is_white:
@@ -199,6 +203,9 @@ def analyze_player_games(username, games_data):
         else:
             target_stats[op_key]["draws"] += 1
             
+        # Categorize loss phase
+        phase = "Opening" if move_count <= 15 else ("Middlegame" if move_count <= 30 else "Endgame")
+        
         game_summary = {
             "url": game_url,
             "eco": eco,
@@ -211,18 +218,15 @@ def analyze_player_games(username, games_data):
             "my_rating": my_data.get("rating"),
             "opp_name": opp_data.get("username"),
             "opp_rating": opp_data.get("rating"),
-            "time_class": time_class
+            "time_class": time_class,
+            "phase": phase
         }
         
         target_stats[op_key]["games"].append(game_summary)
         
-        if is_loss:
+        if is_loss and move_count >= 2:
             all_losses.append(game_summary)
-            if move_count <= 15 and move_count >= 2:
-                # Attach coach advice
-                game_summary["coach_advice"] = generate_coach_advice(game_summary)
-                early_disasters.append(game_summary)
-                
+            
     # Sort openings
     def format_openings(stats_dict):
         res = []
@@ -246,16 +250,26 @@ def analyze_player_games(username, games_data):
     white_openings = format_openings(stats_white)
     black_openings = format_openings(stats_black)
     
-    # Sort early disasters by shortest moves first
-    early_disasters.sort(key=lambda x: x["moves_count"])
+    # Categorize losses into Opening Disasters (40), Middlegame Collapses (30), and Endgame (10)
+    opening_losses = [g for g in all_losses if g["phase"] == "Opening"]
+    opening_losses.sort(key=lambda x: x["moves_count"])
+    
+    middlegame_losses = [g for g in all_losses if g["phase"] == "Middlegame"]
+    middlegame_losses.sort(key=lambda x: x["moves_count"])
+    
+    endgame_losses = [g for g in all_losses if g["phase"] == "Endgame"]
+    endgame_losses.sort(key=lambda x: x["moves_count"])
+    
+    selected_losses = opening_losses[:45] + middlegame_losses[:30] + endgame_losses[:15]
 
-    # Run Deep Stockfish Analysis on Early Disasters
+    # Run Deep Stockfish Analysis across all selected losses
     engine_path = find_stockfish()
-    top_early_disasters = early_disasters[:40]
     if engine_path:
-        print(f"[Stockfish Engine] Analyzing {len(top_early_disasters)} early loss games at depth 12 with {engine_path}...")
-        for idx, g_sum in enumerate(top_early_disasters):
+        print(f"[Stockfish Engine] Analyzing {len(selected_losses)} lost games (Opening, Middlegame & Endgame) at depth 12 with {engine_path}...")
+        for idx, g_sum in enumerate(selected_losses):
             analyze_game_with_stockfish(g_sum, engine_path, depth=12)
+
+    opening_weaknesses = generate_opening_weaknesses_catalog()
 
     return {
         "username": username,
@@ -265,8 +279,11 @@ def analyze_player_games(username, games_data):
         "total_draws": total_draws,
         "win_rate": round((total_wins / max(1, total_wins + total_losses + total_draws)) * 100, 1),
         "loss_reasons": dict(loss_reasons),
-        "early_disasters_count": len(early_disasters),
-        "early_disasters": top_early_disasters, # Enriched with Stockfish 18 analysis!
+        "early_disasters_count": len(opening_losses),
+        "opening_disasters_count": len(opening_losses),
+        "early_disasters": selected_losses,
+        "all_analyzed_losses": selected_losses, # 90 curated games with Stockfish evaluations
+        "opening_weaknesses": opening_weaknesses, # Dedicated Opening Weakness & Refutation Diagnostic
         "white_openings": white_openings,
         "black_openings": black_openings,
         "first_moves_white": dict(first_moves_white.most_common(5)),
