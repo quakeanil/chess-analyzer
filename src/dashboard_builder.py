@@ -1,5 +1,5 @@
 """
-HTML Dashboard & Full Lichess-Style Opening Explorer & Trainer Generator
+HTML Dashboard & Full Lichess-Style Opening Explorer, Trainer & Stockfish Engine Analyzer
 """
 import json
 import os
@@ -24,7 +24,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess.com Diagnostics & Opening Explorer - __USERNAME__</title>
+    <title>Chess.com Diagnostics & Stockfish Engine - __USERNAME__</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -37,7 +37,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         .tab-btn.active { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 600; }
         .board-container { max-width: 420px; width: 100%; margin: 0 auto; }
         .trainer-card.active { border-color: #38bdf8; background-color: #0369a120; }
-        /* Lichess style win rate bar */
         .eval-bar-container { display: flex; height: 16px; width: 100%; border-radius: 3px; overflow: hidden; font-size: 10px; line-height: 16px; font-weight: 600; text-align: center; }
         .bar-white { background-color: #f1f5f9; color: #0f172a; }
         .bar-draw { background-color: #64748b; color: #f8fafc; }
@@ -52,10 +51,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             <span class="text-3xl">♟️</span>
             <div>
                 <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    Chess Diagnostics & Lichess-Style Explorer
+                    Chess Diagnostics & Stockfish 18 Engine
                     <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded font-mono">__USERNAME__</span>
                 </h1>
-                <p class="text-xs text-slate-400">Move-by-Move Master Win Rates, Video Lessons & Interactive Drills</p>
+                <p class="text-xs text-slate-400">Deep Stockfish Blunder Detection, Move-by-Move Evaluations & Lichess Explorer</p>
             </div>
         </div>
         <div class="flex gap-4 mt-2 sm:mt-0 text-sm">
@@ -74,9 +73,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Navigation Tabs -->
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6">
         <nav class="flex space-x-8 text-sm">
-            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">🎯 Lichess-Style Explorer & Trainer</button>
+            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition">⚡ Stockfish Lost Games Replayer</button>
+            <button onclick="switchTab('trainer')" id="tab-trainer" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎯 Lichess-Style Explorer & Trainer</button>
             <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">📊 Top 10 Win/Loss Openings</button>
-            <button onclick="switchTab('disasters')" id="tab-disasters" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">⚡ Early Disaster Replayer</button>
             <button onclick="switchTab('videos')" id="tab-videos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">🎥 Master Video Lessons</button>
             <button onclick="switchTab('repertoire')" id="tab-repertoire" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition">📜 Coach's Golden Rules</button>
         </nav>
@@ -85,8 +84,95 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6">
 
-        <!-- TAB 1: LICHESS-STYLE EXPLORER & TRAINER -->
-        <section id="view-trainer" class="space-y-6">
+        <!-- TAB 1: STOCKFISH EARLY DISASTER REPLAYER -->
+        <section id="view-disasters" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Board & Engine Bar -->
+                <div class="lg:col-span-5 flex flex-col items-center">
+                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700">
+                        <div id="replay-board" style="width: 100%"></div>
+                    </div>
+                    <!-- Navigation Controls -->
+                    <div class="flex items-center gap-2 mt-4">
+                        <button onclick="replayFirst()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">|&lt;</button>
+                        <button onclick="replayPrev()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&lt; Prev</button>
+                        <button onclick="replayNext()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-semibold">Next &gt;</button>
+                        <button onclick="replayLast()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&gt;|</button>
+                    </div>
+                    <div id="replay-status" class="text-xs text-slate-400 mt-2 font-mono">Move 0 / 0</div>
+                </div>
+
+                <!-- Right: Game Selector, Move Quality & Stockfish Live Panel -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Select Lost Game (Analyzed with Stockfish 18):</label>
+                        <select id="game-select" onchange="loadSelectedGame(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500"></select>
+
+                        <div id="game-meta-card" class="bg-slate-900/70 p-3.5 rounded-lg border border-slate-700 mt-3 text-xs space-y-1">
+                            <div><strong>Opening:</strong> <span id="meta-opening" class="text-sky-400"></span></div>
+                            <div><strong>Opponent:</strong> <span id="meta-opp" class="text-slate-300"></span> | <strong>Result:</strong> <span id="meta-result" class="text-rose-400 font-semibold"></span></div>
+                            <div><strong>Chess.com Link:</strong> <a id="meta-link" href="#" target="_blank" class="text-sky-400 underline">Open on Chess.com ↗</a></div>
+                        </div>
+
+                        <!-- Move List with Quality Badges -->
+                        <div class="mt-3">
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to inspect with Stockfish):</label>
+                            <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-32 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- STOCKFISH 18 LIVE ENGINE EVALUATION CARD -->
+                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border-2 border-sky-500/40 p-5 space-y-3 shadow-xl">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-sky-400 flex items-center gap-2">
+                                <span>🤖</span> Stockfish 18 Engine Analysis
+                            </h3>
+                            <span id="sf-eval-badge" class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2.5 py-0.5 rounded font-mono font-bold">Eval: 0.0</span>
+                        </div>
+
+                        <!-- Move Comparison Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div class="bg-slate-900/90 border border-slate-700 p-3 rounded-lg">
+                                <div class="font-bold text-slate-400 uppercase text-[10px] mb-1">Move Played in Game</div>
+                                <div class="flex items-center gap-2">
+                                    <span id="sf-played-move" class="font-mono text-sm text-slate-100 font-bold">--</span>
+                                    <span id="sf-quality-badge" class="text-[10px] px-2 py-0.5 rounded font-mono font-semibold border">--</span>
+                                </div>
+                            </div>
+                            <div class="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg">
+                                <div class="font-bold text-emerald-400 uppercase text-[10px] mb-1">🟢 Stockfish Recommended Best Move</div>
+                                <div id="sf-best-move" class="font-mono text-sm text-emerald-300 font-bold">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Engine Best Continuation Line (PV) -->
+                        <div class="bg-slate-900/80 border border-slate-700 p-3 rounded-lg text-xs space-y-1">
+                            <strong class="text-slate-400 font-bold uppercase text-[10px] tracking-wide block">Engine Best Continuation (PV Line):</strong>
+                            <p id="sf-pv-line" class="font-mono text-slate-200 leading-relaxed text-[11px]">--</p>
+                        </div>
+                    </div>
+
+                    <!-- COACH RECOMMENDATIONS BOX -->
+                    <div id="coach-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950/40 rounded-xl border border-amber-500/40 p-4 space-y-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-amber-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+                                <span>🎯</span> Coach Diagnostic & Rule
+                            </strong>
+                            <span id="coach-ply-tag" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-mono">Move 5</span>
+                        </div>
+                        <div class="text-slate-200">
+                            <strong class="text-rose-400">⚠️ NEVER DO THIS:</strong> <span id="coach-never-rule"></span>
+                        </div>
+                        <div class="text-slate-300 border-t border-slate-800 pt-1.5">
+                            <strong class="text-sky-300">💡 WHY THIS WORKS:</strong> <span id="coach-explanation"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: LICHESS-STYLE EXPLORER & TRAINER -->
+        <section id="view-trainer" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Left: Board & Controls -->
                 <div class="lg:col-span-5 flex flex-col items-center">
@@ -160,7 +246,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             </div>
         </section>
 
-        <!-- TAB 2: TOP 10 WINNING & LOSING OPENINGS -->
+        <!-- TAB 3: TOP 10 WINNING & LOSING OPENINGS -->
         <section id="view-overview" class="hidden space-y-6">
             <!-- Top Metric Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -289,76 +375,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                             </thead>
                             <tbody id="black-loss-tbody" class="divide-y divide-slate-700/50"></tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: EARLY DISASTER REPLAYER -->
-        <section id="view-disasters" class="hidden space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Left: Board -->
-                <div class="lg:col-span-5 flex flex-col items-center">
-                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700">
-                        <div id="replay-board" style="width: 100%"></div>
-                    </div>
-                    <div class="flex items-center gap-2 mt-4">
-                        <button onclick="replayFirst()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">|&lt;</button>
-                        <button onclick="replayPrev()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&lt; Prev</button>
-                        <button onclick="replayNext()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-semibold">Next &gt;</button>
-                        <button onclick="replayLast()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm font-semibold">&gt;|</button>
-                    </div>
-                    <div id="replay-status" class="text-xs text-slate-400 mt-2 font-mono">Move 0 / 0</div>
-                </div>
-
-                <!-- Right: Game Selector & Advice -->
-                <div class="lg:col-span-7 space-y-4">
-                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Select Lost Game (<=15 moves):</label>
-                        <select id="game-select" onchange="loadSelectedGame(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500"></select>
-
-                        <div id="game-meta-card" class="bg-slate-900/70 p-3.5 rounded-lg border border-slate-700 mt-3 text-xs space-y-1">
-                            <div><strong>Opening:</strong> <span id="meta-opening" class="text-sky-400"></span></div>
-                            <div><strong>Opponent:</strong> <span id="meta-opp" class="text-slate-300"></span> | <strong>Result:</strong> <span id="meta-result" class="text-rose-400 font-semibold"></span></div>
-                            <div><strong>Chess.com Link:</strong> <a id="meta-link" href="#" target="_blank" class="text-sky-400 underline">Open on Chess.com ↗</a></div>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Move Notation (Click any move to jump):</label>
-                            <div id="moves-container" class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs max-h-32 overflow-y-auto leading-relaxed flex flex-wrap gap-1.5"></div>
-                        </div>
-                    </div>
-
-                    <!-- COACH RECOMMENDATIONS BOX -->
-                    <div id="coach-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950/40 rounded-xl border-2 border-amber-500/40 p-5 space-y-3 shadow-xl">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
-                                <span>🎯</span> Coach Diagnostic & Better Move
-                            </h3>
-                            <span id="coach-ply-tag" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-mono">Move Diagnosis</span>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div class="bg-rose-950/40 border border-rose-800/60 p-3 rounded-lg">
-                                <div class="font-bold text-rose-400 uppercase text-[11px] mb-1">🔴 What You Played</div>
-                                <div id="coach-played-move" class="font-mono text-sm text-slate-100 font-bold"></div>
-                            </div>
-                            <div class="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg">
-                                <div class="font-bold text-emerald-400 uppercase text-[11px] mb-1">🟢 What You Should Play Instead</div>
-                                <div id="coach-better-move" class="font-mono text-sm text-emerald-300 font-bold"></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900/80 border border-amber-500/30 p-3.5 rounded-lg text-xs space-y-2">
-                            <div>
-                                <strong class="text-rose-300 font-bold uppercase text-[11px] tracking-wide">⚠️ NEVER DO THIS RULE:</strong>
-                                <p id="coach-never-rule" class="text-slate-200 mt-0.5 font-medium"></p>
-                            </div>
-                            <div class="border-t border-slate-800 pt-2">
-                                <strong class="text-sky-300 font-bold uppercase text-[11px] tracking-wide">💡 WHY THIS WORKS (MASTER INSIGHT):</strong>
-                                <p id="coach-explanation" class="text-slate-300 mt-0.5 leading-relaxed"></p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -587,7 +603,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
         // Switch Tabs
         function switchTab(tabId) {
-            ['overview', 'trainer', 'disasters', 'videos', 'repertoire'].forEach(id => {
+            ['disasters', 'trainer', 'overview', 'videos', 'repertoire'].forEach(id => {
                 document.getElementById('view-' + id).classList.add('hidden');
                 document.getElementById('tab-' + id).classList.remove('active');
             });
@@ -602,10 +618,144 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         }
 
         // ==========================================
-        // COMPREHENSIVE LICHESS-STYLE OPENING DRILLS & DATA
+        // STOCKFISH REPLAYER ENGINE
+        // ==========================================
+        let replayBoard = null;
+        let currentGameIndex = 0;
+        let currentPly = 0;
+        let currentFens = [];
+
+        function initReplayer() {
+            const select = document.getElementById('game-select');
+            select.innerHTML = analysisData.early_disasters.map((g, idx) => `
+                <option value="${idx}">${idx+1}. [${g.moves_count} moves] vs ${g.opp_name} (${g.opp_rating || '?'}) - ${g.opening}</option>
+            `).join('');
+
+            replayBoard = Chessboard('replay-board', {
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+
+            if (analysisData.early_disasters.length > 0) {
+                loadSelectedGame(0);
+            }
+        }
+
+        function loadSelectedGame(idx) {
+            currentGameIndex = parseInt(idx);
+            const g = analysisData.early_disasters[currentGameIndex];
+            if (!g) return;
+
+            document.getElementById('meta-opening').innerText = g.opening;
+            document.getElementById('meta-opp').innerText = `${g.opp_name} (${g.opp_rating || '?'})`;
+            document.getElementById('meta-result').innerText = `${g.result} in ${g.moves_count} moves`;
+            document.getElementById('meta-link').href = g.url;
+
+            // Load Coach Advice Card
+            if (g.coach_advice) {
+                document.getElementById('coach-card').classList.remove('hidden');
+                document.getElementById('coach-never-rule').innerText = g.coach_advice.never_rule;
+                document.getElementById('coach-explanation').innerText = g.coach_advice.explanation;
+                document.getElementById('coach-ply-tag').innerText = `Critical Move: Move ${g.coach_advice.move_num}`;
+            }
+
+            currentFens = g.fens;
+            currentPly = 0;
+
+            replayBoard.orientation(g.color.toLowerCase());
+            replayBoard.position(currentFens[0]);
+
+            // Render moves with colored badge dots
+            const mc = document.getElementById('moves-container');
+            const sfData = g.stockfish_analysis || [];
+
+            mc.innerHTML = g.moves_san.map((m, i) => {
+                const moveNum = Math.floor(i/2) + 1;
+                const prefix = (i % 2 === 0) ? `${moveNum}. ` : '';
+                const plySf = sfData[i];
+                let dot = '';
+                if (plySf) {
+                    if (plySf.quality === 'Blunder') dot = '<span class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-0.5"></span>';
+                    else if (plySf.quality === 'Mistake') dot = '<span class="inline-block w-2 h-2 rounded-full bg-orange-500 mr-0.5"></span>';
+                    else if (plySf.quality === 'Inaccuracy') dot = '<span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-0.5"></span>';
+                    else dot = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-0.5"></span>';
+                }
+                return `<span id="ply-${i+1}" onclick="jumpToPly(${i+1})" class="cursor-pointer px-1.5 py-0.5 rounded hover:bg-slate-700 flex items-center gap-1">${dot}${prefix}${m}</span>`;
+            }).join('');
+
+            updateReplayStatus();
+        }
+
+        function updateReplayStatus() {
+            if (!currentFens || currentFens.length === 0) return;
+            replayBoard.position(currentFens[currentPly]);
+            document.getElementById('replay-status').innerText = `Ply ${currentPly} / ${currentFens.length - 1}`;
+            
+            // Highlight move
+            document.querySelectorAll('#moves-container span').forEach(el => el.classList.remove('bg-sky-500/30', 'text-sky-300'));
+            const curEl = document.getElementById(`ply-${currentPly}`);
+            if (curEl) {
+                curEl.classList.add('bg-sky-500/30', 'text-sky-300');
+            }
+
+            // Update Stockfish Live Card
+            const g = analysisData.early_disasters[currentGameIndex];
+            const sfList = g.stockfish_analysis || [];
+            
+            if (currentPly > 0 && currentPly <= sfList.length) {
+                const plyData = sfList[currentPly - 1];
+                document.getElementById('sf-eval-badge').innerText = `Stockfish 18 Eval: ${plyData.eval_str}`;
+                document.getElementById('sf-played-move').innerText = `${plyData.move_num}. ${plyData.played_san}`;
+                
+                const qBadge = document.getElementById('sf-quality-badge');
+                qBadge.innerText = plyData.quality;
+                qBadge.className = `text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${plyData.badge}`;
+
+                document.getElementById('sf-best-move').innerText = `${plyData.move_num}. ${plyData.best_san}`;
+                document.getElementById('sf-pv-line').innerText = plyData.pv_san ? `Line: ${plyData.pv_san}` : "Direct Tactical Refutation";
+            } else {
+                document.getElementById('sf-eval-badge').innerText = "Stockfish 18 Eval: 0.0";
+                document.getElementById('sf-played-move').innerText = "Start Position";
+                document.getElementById('sf-quality-badge').innerText = "Initial";
+                document.getElementById('sf-quality-badge').className = "text-[10px] px-2 py-0.5 rounded font-mono font-semibold border bg-slate-700 text-slate-300";
+                document.getElementById('sf-best-move').innerText = "1. e4 / 1. d4 / 1. Nf3";
+                document.getElementById('sf-pv-line').innerText = "Standard opening development";
+            }
+        }
+
+        function replayNext() {
+            if (currentPly < currentFens.length - 1) {
+                currentPly++;
+                updateReplayStatus();
+            }
+        }
+
+        function replayPrev() {
+            if (currentPly > 0) {
+                currentPly--;
+                updateReplayStatus();
+            }
+        }
+
+        function replayFirst() {
+            currentPly = 0;
+            updateReplayStatus();
+        }
+
+        function replayLast() {
+            currentPly = currentFens.length - 1;
+            updateReplayStatus();
+        }
+
+        function jumpToPly(ply) {
+            currentPly = ply;
+            updateReplayStatus();
+        }
+
+        // ==========================================
+        // LICHESS-STYLE OPENING DRILLS & DATA
         // ==========================================
         const openingDrills = [
-            // ⚪ WHITE FIXES (LOSING LINES)
             {
                 id: 0,
                 category: "white_fix",
@@ -766,8 +916,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     }
                 ]
             },
-
-            // ⚫ BLACK FIXES (LOSING LINES)
             {
                 id: 2,
                 category: "black_fix",
@@ -1154,107 +1302,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('trainer-subtext').innerHTML = `<span class='text-amber-400 font-bold'>💡 Hint:</span> Look for <strong>${expected.san}</strong> (${expected.comment})`;
         }
 
-        // ==========================================
-        // REPLAYER ENGINE
-        // ==========================================
-        let replayBoard = null;
-        let currentGameIndex = 0;
-        let currentPly = 0;
-        let currentFens = [];
-
-        function initReplayer() {
-            const select = document.getElementById('game-select');
-            select.innerHTML = analysisData.early_disasters.map((g, idx) => `
-                <option value="${idx}">${idx+1}. [${g.moves_count} moves] vs ${g.opp_name} (${g.opp_rating || '?'}) - ${g.opening}</option>
-            `).join('');
-
-            replayBoard = Chessboard('replay-board', {
-                position: 'start',
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-            });
-
-            if (analysisData.early_disasters.length > 0) {
-                loadSelectedGame(0);
-            }
-        }
-
-        function loadSelectedGame(idx) {
-            currentGameIndex = parseInt(idx);
-            const g = analysisData.early_disasters[currentGameIndex];
-            if (!g) return;
-
-            document.getElementById('meta-opening').innerText = g.opening;
-            document.getElementById('meta-opp').innerText = `${g.opp_name} (${g.opp_rating || '?'})`;
-            document.getElementById('meta-result').innerText = `${g.result} in ${g.moves_count} moves`;
-            document.getElementById('meta-link').href = g.url;
-
-            // Load Coach Advice Card
-            if (g.coach_advice) {
-                document.getElementById('coach-card').classList.remove('hidden');
-                document.getElementById('coach-played-move').innerText = g.coach_advice.played_move;
-                document.getElementById('coach-better-move').innerText = g.coach_advice.better_move;
-                document.getElementById('coach-never-rule').innerText = g.coach_advice.never_rule;
-                document.getElementById('coach-explanation').innerText = g.coach_advice.explanation;
-                document.getElementById('coach-ply-tag').innerText = `Critical Move: Move ${g.coach_advice.move_num}`;
-            }
-
-            currentFens = g.fens;
-            currentPly = 0;
-
-            replayBoard.orientation(g.color.toLowerCase());
-            replayBoard.position(currentFens[0]);
-
-            const mc = document.getElementById('moves-container');
-            mc.innerHTML = g.moves_san.map((m, i) => {
-                const moveNum = Math.floor(i/2) + 1;
-                const prefix = (i % 2 === 0) ? `${moveNum}. ` : '';
-                return `<span id="ply-${i+1}" onclick="jumpToPly(${i+1})" class="cursor-pointer px-1 py-0.5 rounded hover:bg-slate-700">${prefix}${m}</span>`;
-            }).join('');
-
-            updateReplayStatus();
-        }
-
-        function updateReplayStatus() {
-            if (!currentFens || currentFens.length === 0) return;
-            replayBoard.position(currentFens[currentPly]);
-            document.getElementById('replay-status').innerText = `Ply ${currentPly} / ${currentFens.length - 1}`;
-            
-            document.querySelectorAll('#moves-container span').forEach(el => el.classList.remove('bg-sky-500/30', 'text-sky-300'));
-            const curEl = document.getElementById(`ply-${currentPly}`);
-            if (curEl) {
-                curEl.classList.add('bg-sky-500/30', 'text-sky-300');
-            }
-        }
-
-        function replayNext() {
-            if (currentPly < currentFens.length - 1) {
-                currentPly++;
-                updateReplayStatus();
-            }
-        }
-
-        function replayPrev() {
-            if (currentPly > 0) {
-                currentPly--;
-                updateReplayStatus();
-            }
-        }
-
-        function replayFirst() {
-            currentPly = 0;
-            updateReplayStatus();
-        }
-
-        function replayLast() {
-            currentPly = currentFens.length - 1;
-            updateReplayStatus();
-        }
-
-        function jumpToPly(ply) {
-            currentPly = ply;
-            updateReplayStatus();
-        }
-
         // Initialization
         $(document).ready(function() {
             initReplayer();
@@ -1279,5 +1326,5 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
-    print(f"Generated interactive dashboard: {output_path}")
+    print(f"Generated interactive dashboard with Stockfish: {output_path}")
     return output_path

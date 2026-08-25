@@ -1,11 +1,12 @@
 """
-Chess Diagnostic & Opening Analysis Engine with AI Coach Recommendations
+Chess Diagnostic & Opening Analysis Engine with Stockfish 18 & AI Coach Recommendations
 """
 import io
 import json
 from collections import defaultdict, Counter
 import chess
 import chess.pgn
+from src.engine_analyzer import find_stockfish, analyze_game_with_stockfish
 
 def generate_coach_advice(game_summary):
     """
@@ -248,6 +249,14 @@ def analyze_player_games(username, games_data):
     # Sort early disasters by shortest moves first
     early_disasters.sort(key=lambda x: x["moves_count"])
 
+    # Run Deep Stockfish Analysis on Early Disasters
+    engine_path = find_stockfish()
+    top_early_disasters = early_disasters[:40]
+    if engine_path:
+        print(f"[Stockfish Engine] Analyzing {len(top_early_disasters)} early loss games at depth 12 with {engine_path}...")
+        for idx, g_sum in enumerate(top_early_disasters):
+            analyze_game_with_stockfish(g_sum, engine_path, depth=12)
+
     return {
         "username": username,
         "total_games": len(games_data),
@@ -257,10 +266,11 @@ def analyze_player_games(username, games_data):
         "win_rate": round((total_wins / max(1, total_wins + total_losses + total_draws)) * 100, 1),
         "loss_reasons": dict(loss_reasons),
         "early_disasters_count": len(early_disasters),
-        "early_disasters": early_disasters[:40], # Top 40 for interactive player
+        "early_disasters": top_early_disasters, # Enriched with Stockfish 18 analysis!
         "white_openings": white_openings,
         "black_openings": black_openings,
         "first_moves_white": dict(first_moves_white.most_common(5)),
         "first_moves_black_vs_e4": dict(first_moves_black_vs_e4.most_common(5)),
-        "first_moves_black_vs_d4": dict(first_moves_black_vs_d4.most_common(5))
+        "first_moves_black_vs_d4": dict(first_moves_black_vs_d4.most_common(5)),
+        "has_stockfish": bool(engine_path)
     }
