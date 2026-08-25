@@ -20,13 +20,14 @@ def generate_opening_weaknesses_catalog():
             "eco": "B01",
             "loss_count": 21,
             "opp_trigger": "Opponent plays: 2. e5",
-            "your_mistake": "You played: 2... d4?! or 2... e6?! (Passive / Cramped)",
+            "your_mistake": "You played: 2... d4?! or 2... e6?! (Passive / Traps Bishop on c8)",
             "best_option": "Your Best Move: 2... Bf5! (followed by 3...e6, 4...c5! & 5...Nc6)",
             "why_reason": "When White pushes 2.e5, White closes the center. If you play 2...e6, your light-squared bishop is trapped on c8 for the entire game. If you play 2...d4, White attacks with f4. Playing 2...Bf5! brings your bishop outside the pawn chain before locking it with e6, giving Black an active, winning setup.",
             "fen_setup": "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
             "refutation_uci": "c8f5",
-            "refutation_san": "Bf5!",
-            "drill_seq": ["e4", "d5", "e5", "Bf5", "d4", "e6", "Nf3", "c5"]
+            "refutation_san": "2... Bf5!",
+            "line_san": ["Bf5", "d4", "e6", "Nf3", "c5", "c3", "Nc6"],
+            "line_uci": ["c8f5", "d2d4", "e7e6", "g1f3", "c7c5", "c2c3", "b8c6"]
         },
         {
             "id": "englund_trap",
@@ -34,14 +35,15 @@ def generate_opening_weaknesses_catalog():
             "opening": "Englund Gambit 1.d4 e5",
             "eco": "A40",
             "loss_count": 13,
-            "opp_trigger": "Opponent plays: 4... Qb4+ (Forking King and Bishop)",
-            "your_mistake": "You played: 5. Qd2?? or 5. Qc3?? (Loses queen or b2/a1 rook)",
+            "opp_trigger": "Opponent plays: 4... Qb4+ (Forking King and Bishop on f4)",
+            "your_mistake": "You played: 5. Qd2?? or 5. Qc3?? (Loses queen or b2/a1 rook to 5...Qxb2)",
             "best_option": "Your Best Move: 5. Bd2! Qxb2 6. Nc3! (+3.8 Advantage)",
             "why_reason": "Never block early queen checks with Qd2 when b2 is hanging! 5.Bd2! protects your king and poisons the b2 pawn. When Black greedily captures 5...Qxb2, play 6.Nc3! White threatens 7.Rb1 (trapping Black's queen) and 7.Nd5 (forking c7 King and Rook). Black is dead lost.",
-            "fen_setup": "r1b1kbnr/pppp1ppp/2n5/4P3/1q3B2/5N2/PPP1PPPP/RN1QKB1R w KQkq - 3 5",
+            "fen_setup": "r1b1kbnr/pppp1ppp/2n5/4P3/1q3B2/5N2/PPP1PPPP/RN1QKB1R w KQkq - 5 5",
             "refutation_uci": "f4d2",
-            "refutation_san": "Bd2!",
-            "drill_seq": ["d4", "e5", "dxe5", "Nc6", "Nf3", "Qe7", "Bf4", "Qb4+", "Bd2", "Qxb2", "Nc3"]
+            "refutation_san": "5. Bd2!",
+            "line_san": ["Bd2", "Qxb2", "Nc3", "Bb4", "Rb1", "Qa3", "Rb3", "Qa5", "a3"],
+            "line_uci": ["f4d2", "b4b2", "b1c3", "f8b4", "a1b1", "b2a3", "b1b3", "a3a5", "a2a3"]
         },
         {
             "id": "danish_gambit",
@@ -53,10 +55,11 @@ def generate_opening_weaknesses_catalog():
             "your_mistake": "You played: 5... Qf6?! or 5... Nf6? (Walks into e5 attack)",
             "best_option": "Your Best Move: 5... d5!! (The Schlechter Defense Refutation)",
             "why_reason": "White sacrificed two pawns to get murderous attacking diagonals with Bc4 and Bb2. Pushing 5...d5!! immediately blocks both bishops and returns one pawn to force queen exchanges (6.Bxd5 Nf6 7.Bxf7+ Kxf7 8.Qxd8 Bb4+ 9.Qd2 Bxd2+). Black emerges a clean pawn up with zero king danger.",
-            "fen_setup": "rnbqkbnr/pppp1ppp/8/8/8/8/PB3PPP/RN1QKBNR b KQkq - 0 5",
+            "fen_setup": "rnbqkbnr/pppp1ppp/8/8/2B1P3/8/PB3PPP/RN1QK1NR b KQkq - 0 5",
             "refutation_uci": "d7d5",
-            "refutation_san": "d5!!",
-            "drill_seq": ["e4", "e5", "d4", "exd4", "c3", "dxc3", "Bc4", "cxb2", "Bxb2", "d5"]
+            "refutation_san": "5... d5!!",
+            "line_san": ["d5", "Bxd5", "Nf6", "Bxf7+", "Kxf7", "Qxd8", "Bb4+", "Qd2", "Bxd2+", "Nxd2"],
+            "line_uci": ["d7d5", "c4d5", "g8f6", "d5f7", "e8f7", "d1d8", "f8b4", "d8d2", "b4d2", "b1d2"]
         },
         {
             "id": "london_black",
@@ -70,8 +73,9 @@ def generate_opening_weaknesses_catalog():
             "why_reason": "When White plays 2.Bf4, the b2 pawn is left unguarded. If you play passively, White builds an impenetrable triangle (c3-d4-e3). Striking immediately with 2...c5! and 4...Qb6! forces White to weaken their queenside (b3/Qc1) and gives Black the initiative.",
             "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 1 2",
             "refutation_uci": "c7c5",
-            "refutation_san": "c5!",
-            "drill_seq": ["d4", "d5", "Bf4", "c5", "e3", "Nc6", "Nf3", "Qb6"]
+            "refutation_san": "2... c5!",
+            "line_san": ["c5", "e3", "Nc6", "Nf3", "Qb6", "Nc3", "cxd4", "exd4", "e6"],
+            "line_uci": ["c7c5", "e2e3", "b8c6", "g1f3", "d8b6", "b1c3", "c5d4", "e3d4", "e7e6"]
         },
         {
             "id": "white_passive_d4",
@@ -85,8 +89,9 @@ def generate_opening_weaknesses_catalog():
             "why_reason": "In 1.d4 openings, White must either strike the center with 2.c4! (putting direct pressure on d5) or develop the dark bishop first with 2.Bf4! before playing e3. Playing Nf3 + e3 without c4 lets Black play ...c5 and ...Bf5 with a 70%+ win rate against you.",
             "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
             "refutation_uci": "c2c4",
-            "refutation_san": "c4! (Queen's Gambit)",
-            "drill_seq": ["d4", "d5", "c4", "e6", "Nc3", "Nf6"]
+            "refutation_san": "2. c4! (Queen's Gambit)",
+            "line_san": ["c4", "e6", "Nc3", "Nf6", "cxd5", "exd5", "Bg5"],
+            "line_uci": ["c2c4", "e7e6", "b1c3", "g8f6", "c4d5", "e6d5", "c1g5"]
         },
         {
             "id": "reti_wedge",
@@ -100,8 +105,9 @@ def generate_opening_weaknesses_catalog():
             "why_reason": "When White offers 2.c4 in the Réti, pushing 2...d4! creates an advanced wedge on White's queenside. It deprives White's knight of the natural c3 square and gives Black long-term space control. Follow up with 3...c5 and 4...Nc6.",
             "fen_setup": "rnbqkbnr/ppp1pppp/8/3p4/2P5/5N2/PP1PPPPP/RNBQKB1R b KQkq - 0 2",
             "refutation_uci": "d5d4",
-            "refutation_san": "d4!",
-            "drill_seq": ["Nf3", "d5", "c4", "d4", "e3", "c5", "exd4", "cxd4"]
+            "refutation_san": "2... d4!",
+            "line_san": ["d4", "e3", "c5", "exd4", "cxd4", "d3", "Nc6", "g3", "e5"],
+            "line_uci": ["d5d4", "e2e3", "c7c5", "e3d4", "c5d4", "d2d3", "b8c6", "g2g3", "e7e5"]
         }
     ]
 

@@ -80,9 +80,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Navigation Tabs -->
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 sm:px-6">
         <nav class="flex space-x-4 sm:space-x-8 text-xs sm:text-sm overflow-x-auto">
-            <button onclick="switchTab('weaknesses')" id="tab-weaknesses" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🛡️ Opening Weaknesses & Refutations</button>
+            <button onclick="switchTab('sparring')" id="tab-sparring" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚔️ Sparring Bot & "What If?"</button>
+            <button onclick="switchTab('weaknesses')" id="tab-weaknesses" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🛡️ Opening Weaknesses & Refutations</button>
             <button onclick="switchTab('blunders')" id="tab-blunders" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚡ Tactical Blunders & Lost Games (90+)</button>
-            <button onclick="switchTab('sparring')" id="tab-sparring" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚔️ Sparring Bot & "What If?"</button>
             <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">📊 Top 10 Win/Loss Openings</button>
             <button onclick="switchTab('videos')" id="tab-videos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🎥 Master Video Lessons</button>
         </nav>
@@ -91,8 +91,133 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
 
-        <!-- TAB 0: 🛡️ OPENING WEAKNESS REFUTATIONS (DEDICATED) -->
-        <section id="view-weaknesses" class="space-y-4 sm:space-y-6">
+        <!-- TAB 0: ⚔️ SPARRING BOT & WHAT-IF (IMPROVED WITH BLACK SUPPORT & FREE MOVE) -->
+        <section id="view-sparring" class="space-y-4 sm:space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+                <!-- Left: Sparring Board -->
+                <div class="lg:col-span-5 flex flex-col items-center">
+                    <!-- Top Side & Control Selector Bar -->
+                    <div class="w-full max-w-[420px] flex items-center justify-between gap-1 mb-2 text-xs">
+                        <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-700">
+                            <button onclick="setUserSide('white')" id="btn-side-white" class="px-2.5 py-1 bg-sky-600 text-white rounded font-bold transition">⚪ As White</button>
+                            <button onclick="setUserSide('black')" id="btn-side-black" class="px-2.5 py-1 text-slate-300 hover:text-white rounded font-bold transition">⚫ As Black</button>
+                            <button onclick="setUserSide('both')" id="btn-side-both" class="px-2.5 py-1 text-slate-300 hover:text-white rounded font-bold transition">♟️ Free Play</button>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="flipSparringBoard()" title="Flip Board Orientation" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 font-bold">
+                                🔄 Flip
+                            </button>
+                            <button onclick="toggleBotAutoReply()" id="btn-bot-toggle" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded border border-emerald-500/40 text-[11px] font-bold">
+                                🤖 Bot: ON
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700 relative">
+                        <div id="sparring-board" style="width: 100%"></div>
+                        <svg id="sparring-arrows-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10" style="width: 100%; height: 100%;">
+                            <defs>
+                                <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                                </marker>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-3 sm:mt-4">
+                        <button onclick="resetSparringGame()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-bold shadow flex items-center gap-1.5">
+                            <span>🔄</span> New Game
+                        </button>
+                        <button onclick="undoSparringMove()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-semibold">
+                            ↩️ Takeback
+                        </button>
+                        <button onclick="showSparringHint()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-sm font-bold">
+                            💡 Best Move
+                        </button>
+                    </div>
+
+                    <div id="sparring-game-status" class="text-xs text-slate-400 mt-2 font-mono">Move 1 | Your Turn (White)</div>
+                </div>
+
+                <!-- Right: Sparring Repertoire & Lichess Top Moves Table -->
+                <div class="lg:col-span-7 space-y-3 sm:space-y-4">
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-4 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-sky-400 uppercase tracking-wide">Select Opening to Spar Against:</label>
+                            <span id="sparring-bot-tag" class="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded font-mono font-bold">Bot Locked</span>
+                        </div>
+
+                        <select id="sparring-opening-select" onchange="selectSparringOpening(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500 font-medium">
+                            <optgroup label="⚪ Practice As White (PC Plays As Black):">
+                                <option value="scandi">⚪ White vs 🤖 Scandinavian Defense (1.e4 d5)</option>
+                                <option value="englund">⚪ White vs 🤖 Englund Gambit (1.d4 e5)</option>
+                                <option value="qg_white">⚪ White Queen's Gambit Practice (1.d4 d5 2.c4)</option>
+                                <option value="sicilian">⚪ White vs 🤖 Sicilian Defense (1.e4 c5)</option>
+                                <option value="french">⚪ White vs 🤖 French Defense (1.e4 e6)</option>
+                                <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (1.e4 c6)</option>
+                            </optgroup>
+                            <optgroup label="⚫ Practice As Black (PC Plays As White):">
+                                <option value="scandi_black">⚫ Black vs 🤖 Scandinavian 2.e5 (Drill 2...Bf5!)</option>
+                                <option value="london_black">⚫ Black vs 🤖 London System (Drill 2...c5! & 4...Qb6!)</option>
+                                <option value="danish_black">⚫ Black vs 🤖 Danish Gambit (Drill 5...d5!!)</option>
+                                <option value="reti_black">⚫ Black vs 🤖 Reti Opening (Drill 2...d4!)</option>
+                            </optgroup>
+                        </select>
+
+                        <!-- "What-If" Preset Branch Buttons -->
+                        <div class="pt-1">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                                <span>🔀</span> "What If?" Quick Variations (Click to jump & test against):
+                            </div>
+                            <div id="whatif-buttons-container" class="flex flex-wrap gap-1.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- LICHESS MASTER TOP 5 MOVES EXPLORER TABLE (INTERACTIVE) -->
+                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-1.5">
+                                <span>📖</span> Lichess Master Top Moves (Click to play on board)
+                            </h3>
+                            <span id="sparring-eval-badge" class="text-[11px] bg-slate-900 border border-slate-700 text-emerald-400 font-mono px-2 py-0.5 rounded">Eval: --</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-slate-400 bg-slate-900/80 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="py-1.5 px-3">Move</th>
+                                        <th class="py-1.5 px-2">Variation Name</th>
+                                        <th class="py-1.5 px-2 text-center">Games</th>
+                                        <th class="py-1.5 px-2 text-center">Eval</th>
+                                        <th class="py-1.5 px-3 text-center w-36">Win / Draw / Loss %</th>
+                                        <th class="py-1.5 px-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sparring-explorer-tbody" class="divide-y divide-slate-700/50 font-mono"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- LIVE MOVE COACH & NOTATION -->
+                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border border-sky-500/40 p-3.5 space-y-2 shadow-xl">
+                        <div id="sparring-feedback-box" class="bg-slate-900/90 border border-slate-700 p-2.5 rounded-lg text-xs space-y-1">
+                            <div class="font-bold text-slate-200" id="sparring-feedback-title">Make your opening move!</div>
+                            <p class="text-slate-400" id="sparring-feedback-sub">Play on the board or click any move above to branch. (You can also drag opponent pieces manually!)</p>
+                        </div>
+
+                        <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-700">
+                            <div id="sparring-moves-list" class="font-mono text-xs text-slate-200 flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+                                <span class="text-slate-500 italic">No moves played yet</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 1: 🛡️ OPENING WEAKNESS REFUTATIONS (DEDICATED) -->
+        <section id="view-weaknesses" class="hidden space-y-4 sm:space-y-6">
             <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-3 sm:p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-lg sm:text-xl text-sky-400 font-bold">
@@ -125,14 +250,27 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                         </svg>
                     </div>
 
-                    <div class="flex items-center gap-2 mt-3 sm:mt-4">
-                        <button onclick="playWeaknessRefutationAnimation()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow flex items-center gap-1.5">
-                            <span>▶</span> Play Winning Move on Board
+                    <!-- Multi-Step Refutation Line Controls -->
+                    <div class="flex items-center gap-1.5 mt-3 sm:mt-4">
+                        <button onclick="weaknessFirst()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold">|&lt;</button>
+                        <button onclick="weaknessPrev()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold">&lt; Prev</button>
+                        <button onclick="weaknessNext()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-semibold">Next &gt;</button>
+                        <button onclick="weaknessLast()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold">&gt;|</button>
+                        <button onclick="autoPlayWeaknessLine()" id="btn-weak-autoplay" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow flex items-center gap-1">
+                            <span>▶</span> Auto-Play Line
                         </button>
-                        <button onclick="resetWeaknessBoard()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-semibold">
-                            🔄 Reset Position
+                        <button onclick="resetWeaknessBoard()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-semibold">
+                            🔄
                         </button>
                     </div>
+
+                    <div class="flex items-center justify-between w-full max-w-[420px] mt-2 px-1 text-xs">
+                        <span id="weak-step-badge" class="text-emerald-400 font-mono font-bold">Start Position</span>
+                        <span id="weak-step-count" class="text-slate-400 font-mono">Step 0 / 0</span>
+                    </div>
+
+                    <!-- Step-by-Step Move Pills -->
+                    <div id="weak-line-moves" class="flex flex-wrap gap-1.5 max-w-[420px] w-full mt-2 font-mono text-xs max-h-20 overflow-y-auto"></div>
                 </div>
 
                 <!-- Right: Weakness Detail Card & Opening Catalog List -->
@@ -191,7 +329,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             </div>
         </section>
 
-        <!-- TAB 1: ⚡ TACTICAL BLUNDERS & LOST GAMES (90+ GAMES & PUZZLE MODE) -->
+        <!-- TAB 2: ⚡ TACTICAL BLUNDERS & LOST GAMES (90+ GAMES) -->
         <section id="view-blunders" class="hidden space-y-4 sm:space-y-6">
 
             <!-- STUDY PROGRESS & FILTER BANNER -->
@@ -322,114 +460,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                         <div class="bg-slate-900/80 border border-slate-700 p-2.5 rounded-lg text-xs space-y-1">
                             <strong class="text-slate-400 font-bold uppercase text-[10px] tracking-wide block">Engine Best Continuation (PV Line):</strong>
                             <p id="sf-pv-line" class="font-mono text-slate-200 leading-relaxed text-[11px]">--</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: ⚔️ SPARRING BOT & WHAT-IF -->
-        <section id="view-sparring" class="hidden space-y-4 sm:space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-                <!-- Left: Sparring Board -->
-                <div class="lg:col-span-5 flex flex-col items-center">
-                    <div class="board-container shadow-2xl rounded-lg overflow-hidden border border-slate-700 relative">
-                        <div id="sparring-board" style="width: 100%"></div>
-                        <svg id="sparring-arrows-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10" style="width: 100%; height: 100%;">
-                            <defs>
-                                <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
-                                </marker>
-                            </defs>
-                        </svg>
-                    </div>
-
-                    <div class="flex items-center gap-2 mt-3 sm:mt-4">
-                        <button onclick="resetSparringGame()" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm font-bold shadow flex items-center gap-1.5">
-                            <span>🔄</span> New Game
-                        </button>
-                        <button onclick="undoSparringMove()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-semibold">
-                            ↩️ Takeback
-                        </button>
-                        <button onclick="showSparringHint()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-sm font-bold">
-                            💡 Best Move
-                        </button>
-                    </div>
-
-                    <div id="sparring-game-status" class="text-xs text-slate-400 mt-2 font-mono">Move 1 | Your Turn (White)</div>
-                </div>
-
-                <!-- Right: Sparring Repertoire & Lichess Top Moves Table -->
-                <div class="lg:col-span-7 space-y-3 sm:space-y-4">
-                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-4 space-y-2.5">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-sky-400 uppercase tracking-wide">Select Opening to Spar Against:</label>
-                            <span id="sparring-bot-tag" class="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded font-mono font-bold">Bot Locked</span>
-                        </div>
-
-                        <select id="sparring-opening-select" onchange="selectSparringOpening(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500 font-medium">
-                            <optgroup label="⚪ Practice As White (PC Plays As Black):">
-                                <option value="scandi">⚪ White vs 🤖 Scandinavian Defense (1.e4 d5)</option>
-                                <option value="englund">⚪ White vs 🤖 Englund Gambit (1.d4 e5)</option>
-                                <option value="qg_white">⚪ White Queen's Gambit Practice (1.d4 d5 2.c4)</option>
-                                <option value="sicilian">⚪ White vs 🤖 Sicilian Defense (1.e4 c5)</option>
-                                <option value="french">⚪ White vs 🤖 French Defense (1.e4 e6)</option>
-                                <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (1.e4 c6)</option>
-                            </optgroup>
-                            <optgroup label="⚫ Practice As Black (PC Plays As White):">
-                                <option value="scandi_black">⚫ Black vs 🤖 Scandinavian 2.e5 (Drill 2...Bf5!)</option>
-                                <option value="london_black">⚫ Black vs 🤖 London System (Drill 2...c5! & 4...Qb6!)</option>
-                                <option value="danish_black">⚫ Black vs 🤖 Danish Gambit (Drill 5...d5!!)</option>
-                                <option value="reti_black">⚫ Black vs 🤖 Reti Opening (Drill 2...d4!)</option>
-                            </optgroup>
-                        </select>
-
-                        <!-- "What-If" Preset Branch Buttons -->
-                        <div class="pt-1">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                <span>🔀</span> "What If?" Quick Variations (Click to jump & test against):
-                            </div>
-                            <div id="whatif-buttons-container" class="flex flex-wrap gap-1.5"></div>
-                        </div>
-                    </div>
-
-                    <!-- LICHESS MASTER TOP 5 MOVES EXPLORER TABLE (INTERACTIVE) -->
-                    <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-4 space-y-2">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-1.5">
-                                <span>📖</span> Lichess Master Top Moves (Click to play / force bot)
-                            </h3>
-                            <span id="sparring-eval-badge" class="text-[11px] bg-slate-900 border border-slate-700 text-emerald-400 font-mono px-2 py-0.5 rounded">Eval: --</span>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs text-left">
-                                <thead class="text-slate-400 bg-slate-900/80 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="py-1.5 px-3">Move</th>
-                                        <th class="py-1.5 px-2">Variation Name</th>
-                                        <th class="py-1.5 px-2 text-center">Games</th>
-                                        <th class="py-1.5 px-2 text-center">Eval</th>
-                                        <th class="py-1.5 px-3 text-center w-36">Win / Draw / Loss %</th>
-                                        <th class="py-1.5 px-2 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sparring-explorer-tbody" class="divide-y divide-slate-700/50 font-mono"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- LIVE MOVE COACH & NOTATION -->
-                    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950/40 rounded-xl border border-sky-500/40 p-3.5 space-y-2 shadow-xl">
-                        <div id="sparring-feedback-box" class="bg-slate-900/90 border border-slate-700 p-2.5 rounded-lg text-xs space-y-1">
-                            <div class="font-bold text-slate-200" id="sparring-feedback-title">Make your opening move!</div>
-                            <p class="text-slate-400" id="sparring-feedback-sub">Play on the board or click any move above to branch.</p>
-                        </div>
-
-                        <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-700">
-                            <div id="sparring-moves-list" class="font-mono text-xs text-slate-200 flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
-                                <span class="text-slate-500 italic">No moves played yet</span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -590,6 +620,32 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                         </a>
                     </div>
                 </div>
+
+                <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
+                    <div class="p-4 flex-1 space-y-2">
+                        <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
+                        <h3 class="text-sm font-bold text-white">Scandinavian Defense: The Complete Guide (2...Bf5!)</h3>
+                        <p class="text-xs text-slate-300">Hanging Pawns explains why 2...Bf5 gives Black active play and avoids bad French Defense structures.</p>
+                    </div>
+                    <div class="p-4 bg-slate-900/60 border-t border-slate-800">
+                        <a href="https://www.youtube.com/results?search_query=Hanging+Pawns+Scandinavian+Defense+e5" target="_blank" class="block text-center py-2 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-bold transition">
+                            ▶ Watch on YouTube ↗
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
+                    <div class="p-4 flex-1 space-y-2">
+                        <span class="text-[10px] bg-sky-950/80 text-sky-400 border border-sky-800/60 px-2 py-0.5 rounded font-mono font-bold">Black Fix</span>
+                        <h3 class="text-sm font-bold text-white">Reti Opening: Black Space Advantage with 2...d4</h3>
+                        <p class="text-xs text-slate-300">Learn how pushing 2...d4 cramps White's queenside and prevents Nc3.</p>
+                    </div>
+                    <div class="p-4 bg-slate-900/60 border-t border-slate-800">
+                        <a href="https://www.youtube.com/results?search_query=Reti+Opening+Black+advance+d4" target="_blank" class="block text-center py-2 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-bold transition">
+                            ▶ Watch on YouTube ↗
+                        </a>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -601,7 +657,7 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         const topOpenings = __TOP_OPENINGS__;
 
         // ==========================================
-        // 🔊 WEB AUDIO SYNTHESIZER (NO MP3 FILES NEEDED)
+        // 🔊 WEB AUDIO SYNTHESIZER
         // ==========================================
         let audioCtx = null;
         function playChessSound(type = 'move') {
@@ -629,14 +685,6 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                     osc.start(now);
                     osc.stop(now + 0.1);
-                } else if (type === 'victory') {
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.setValueAtTime(554.37, now + 0.08);
-                    osc.frequency.setValueAtTime(659.25, now + 0.16);
-                    gain.gain.setValueAtTime(0.35, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
-                    osc.start(now);
-                    osc.stop(now + 0.3);
                 }
             } catch (e) {}
         }
@@ -687,20 +735,570 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         renderTopTables();
 
         function switchTab(tabId) {
-            ['weaknesses', 'blunders', 'sparring', 'overview', 'videos'].forEach(id => {
+            ['sparring', 'weaknesses', 'blunders', 'overview', 'videos'].forEach(id => {
                 document.getElementById('view-' + id).classList.add('hidden');
                 document.getElementById('tab-' + id).classList.remove('active');
             });
             document.getElementById('view-' + tabId).classList.remove('hidden');
             document.getElementById('tab-' + tabId).classList.add('active');
 
-            if (tabId === 'weaknesses') {
+            if (tabId === 'sparring') {
+                setTimeout(() => { if (sparringBoard) sparringBoard.resize(); }, 100);
+            } else if (tabId === 'weaknesses') {
                 setTimeout(() => { if (weaknessBoard) weaknessBoard.resize(); renderWeaknessArrow(); }, 100);
             } else if (tabId === 'blunders') {
                 setTimeout(() => { if (replayBoard) replayBoard.resize(); renderReplayArrows(); }, 100);
-            } else if (tabId === 'sparring') {
-                setTimeout(() => { if (sparringBoard) sparringBoard.resize(); }, 100);
             }
+        }
+
+        // ==========================================
+        // ⚔️ SPARRING BOT, FREE MOVES & LICHESS TABLE
+        // ==========================================
+        const masterOpeningDatabase = {
+            "": [
+                { san: "e4", games: 2450000, eval: "+0.3", w: 38, d: 34, b: 28, name: "King's Pawn Opening" },
+                { san: "d4", games: 2180000, eval: "+0.3", w: 38, d: 35, b: 27, name: "Queen's Pawn Opening" },
+                { san: "Nf3", games: 520000, eval: "+0.2", w: 36, d: 37, b: 27, name: "Zukertort / Réti" }
+            ],
+            "e4": [
+                { san: "e5", games: 980000, eval: "+0.3", w: 37, d: 33, b: 30, name: "Open Game (1...e5)" },
+                { san: "c5", games: 890000, eval: "+0.2", w: 36, d: 34, b: 30, name: "Sicilian Defense" },
+                { san: "d5", games: 320000, eval: "+0.4", w: 42, d: 29, b: 29, name: "Scandinavian Defense" }
+            ],
+            "e4 d5": [
+                { san: "exd5", games: 280000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Mainline Accepted" },
+                { san: "e5", games: 14000, eval: "-0.2", w: 31, d: 28, b: 41, name: "Advance Variation" }
+            ],
+            "e4 d5 exd5": [
+                { san: "Qxd5", games: 195000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Mieses-Kotroc Mainline" },
+                { san: "Nf6", games: 78000, eval: "+0.5", w: 43, d: 29, b: 28, name: "Modern / Portuguese Variation" }
+            ],
+            "e4 d5 exd5 Qxd5": [
+                { san: "Nc3", games: 185000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Develop with Tempo" }
+            ],
+            "e4 d5 exd5 Qxd5 Nc3": [
+                { san: "Qa5", games: 110000, eval: "+0.4", w: 41, d: 31, b: 28, name: "Classical Mainline (Qa5)" },
+                { san: "Qd6", games: 52000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Gubinsky-Melts (Qd6)" }
+            ],
+            "e4 d5 e5": [
+                { san: "Bf5", games: 12000, eval: "-0.2", w: 30, d: 28, b: 42, name: "Bishop Outside Pawn Chain!" },
+                { san: "c5", games: 1500, eval: "+0.0", w: 33, d: 31, b: 36, name: "Counter-strike" }
+            ],
+            "d4": [
+                { san: "d5", games: 920000, eval: "+0.3", w: 38, d: 35, b: 27, name: "Closed Game (1...d5)" },
+                { san: "Nf6", games: 880000, eval: "+0.3", w: 37, d: 36, b: 27, name: "Indian Defenses" },
+                { san: "e5", games: 32000, eval: "+1.6", w: 62, d: 18, b: 20, name: "Englund Gambit" }
+            ],
+            "d4 e5 dxe5": [
+                { san: "Nc6", games: 22000, eval: "+1.6", w: 61, d: 19, b: 20, name: "Attack e5 Pawn" }
+            ],
+            "d4 e5 dxe5 Nc6 Nf3": [
+                { san: "Qe7", games: 17000, eval: "+1.7", w: 62, d: 18, b: 20, name: "Triple attack on e5" }
+            ],
+            "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4": [
+                { san: "Qb4+", games: 13000, eval: "+1.8", w: 63, d: 18, b: 19, name: "Double Attack Fork!" }
+            ],
+            "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+": [
+                { san: "Bd2!", games: 10500, eval: "+3.5", w: 74, d: 14, b: 12, name: "The Winning Refutation!" },
+                { san: "Qd2??", games: 2200, eval: "-6.2", w: 8, d: 6, b: 86, name: "Blunder! Loses to Qxb2" }
+            ],
+            "d4 d5": [
+                { san: "c4", games: 580000, eval: "+0.4", w: 41, d: 35, b: 24, name: "Queen's Gambit!" },
+                { san: "Bf4", games: 160000, eval: "+0.2", w: 37, d: 35, b: 28, name: "London System" }
+            ],
+            "d4 d5 Bf4": [
+                { san: "c5!", games: 82000, eval: "+0.0", w: 34, d: 36, b: 30, name: "Strike at d4 Center!" },
+                { san: "Nf6", games: 55000, eval: "+0.2", w: 38, d: 35, b: 27, name: "Classical Knight" }
+            ],
+            "d4 d5 Bf4 c5 e3": [
+                { san: "Nc6", games: 52000, eval: "+0.0", w: 34, d: 36, b: 30, name: "Knight Pressure" }
+            ],
+            "d4 d5 Bf4 c5 e3 Nc6 Nf3": [
+                { san: "Qb6!", games: 28000, eval: "-0.2", w: 30, d: 35, b: 35, name: "Double Attack on b2 & d4!" }
+            ],
+            "e4 e5 d4 exd4 c3": [
+                { san: "dxc3", games: 19000, eval: "+0.2", w: 36, d: 28, b: 36, name: "Accept Danish Gambit" }
+            ],
+            "e4 e5 d4 exd4 c3 dxc3 Bc4 cxb2 Bxb2": [
+                { san: "d5!!", games: 6800, eval: "-0.8", w: 22, d: 26, b: 52, name: "Schlechter Defense Refutation!" }
+            ],
+            "Nf3 d5": [
+                { san: "c4", games: 120000, eval: "+0.2", w: 37, d: 36, b: 27, name: "Réti Opening" }
+            ],
+            "Nf3 d5 c4": [
+                { san: "d4!", games: 45000, eval: "-0.1", w: 32, d: 38, b: 30, name: "Space Wedge!" },
+                { san: "e6", games: 35000, eval: "+0.2", w: 38, d: 36, b: 26, name: "Solid Setup" }
+            ]
+        };
+
+        const sparringRepertoires = {
+            scandi: {
+                title: "⚪ White vs 🤖 Scandinavian Defense",
+                userSide: "white",
+                expectedFirst: "e4",
+                botStartMove: null,
+                botTag: "Bot: Scandinavian (1.e4 d5)",
+                whatifs: [
+                    { label: "▶ 2...Qxd5 (Mainline Qa5)", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5"] },
+                    { label: "▶ 2...Nf6 (Portuguese)", seq: ["e4", "d5", "exd5", "Nf6"] },
+                    { label: "▶ 2.e5 (Advance Bf5)", seq: ["e4", "d5", "e5", "Bf5"] }
+                ]
+            },
+            englund: {
+                title: "⚪ White vs 🤖 Englund Gambit",
+                userSide: "white",
+                expectedFirst: "d4",
+                botStartMove: null,
+                botTag: "Bot: Englund Gambit",
+                whatifs: [
+                    { label: "▶ Refute Trap (5.Bd2! Qxb2 6.Nc3!)", seq: ["d4", "e5", "dxe5", "Nc6", "Nf3", "Qe7", "Bf4", "Qb4+", "Bd2", "Qxb2", "Nc3"] }
+                ]
+            },
+            qg_white: {
+                title: "⚪ White Queen's Gambit Practice",
+                userSide: "white",
+                expectedFirst: "d4",
+                botStartMove: null,
+                botTag: "Bot: Queen's Gambit",
+                whatifs: [
+                    { label: "▶ 2...e6 (QGD)", seq: ["d4", "d5", "c4", "e6", "Nc3", "Nf6"] },
+                    { label: "▶ 2...c6 (Slav)", seq: ["d4", "d5", "c4", "c6", "Nf3", "Nf6"] }
+                ]
+            },
+            sicilian: {
+                title: "⚪ White vs 🤖 Sicilian Defense",
+                userSide: "white",
+                expectedFirst: "e4",
+                botStartMove: null,
+                botTag: "Bot: Sicilian Defense",
+                whatifs: [
+                    { label: "▶ 2...d6 (Najdorf)", seq: ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"] }
+                ]
+            },
+            french: {
+                title: "⚪ White vs 🤖 French Defense",
+                userSide: "white",
+                expectedFirst: "e4",
+                botStartMove: null,
+                botTag: "Bot: French Defense",
+                whatifs: [
+                    { label: "▶ Advance (3.e5 c5)", seq: ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6"] }
+                ]
+            },
+            caro: {
+                title: "⚪ White vs 🤖 Caro-Kann Defense",
+                userSide: "white",
+                expectedFirst: "e4",
+                botStartMove: null,
+                botTag: "Bot: Caro-Kann",
+                whatifs: [
+                    { label: "▶ Advance (3.e5 Bf5)", seq: ["e4", "c6", "d4", "d5", "e5", "Bf5", "Nf3", "e6"] }
+                ]
+            },
+            scandi_black: {
+                title: "⚫ Black vs 🤖 Scandinavian 2.e5",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "e4",
+                botTag: "Bot Plays 1.e4 & 2.e5",
+                whatifs: [
+                    { label: "▶ 2.e5 Bf5! (Bishop Free)", seq: ["e4", "d5", "e5", "Bf5", "d4", "e6", "Nf3", "c5"] }
+                ]
+            },
+            london_black: {
+                title: "⚫ Black vs 🤖 London System",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "d4",
+                botTag: "Bot Plays 1.d4 & 2.Bf4",
+                whatifs: [
+                    { label: "▶ 2...c5! 4...Qb6! (Counter-Attack)", seq: ["d4", "d5", "Bf4", "c5", "e3", "Nc6", "Nf3", "Qb6"] }
+                ]
+            },
+            danish_black: {
+                title: "⚫ Black vs 🤖 Danish Gambit",
+                userSide: "black",
+                expectedFirst: "e5",
+                botStartMove: "e4",
+                botTag: "Bot Plays Danish Gambit",
+                whatifs: [
+                    { label: "▶ 5...d5!! (Schlechter Refutation)", seq: ["e4", "e5", "d4", "exd4", "c3", "dxc3", "Bc4", "cxb2", "Bxb2", "d5"] }
+                ]
+            },
+            reti_black: {
+                title: "⚫ Black vs 🤖 Reti Opening",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "Nf3",
+                botTag: "Bot Plays 1.Nf3 & 2.c4",
+                whatifs: [
+                    { label: "▶ 2...d4! (Space Wedge)", seq: ["Nf3", "d5", "c4", "d4"] }
+                ]
+            }
+        };
+
+        let sparringBoard = null;
+        let sparringGame = new Chess();
+        let currentSparringRep = sparringRepertoires.scandi;
+        let activeUserSide = "white"; // "white", "black", or "both"
+        let botAutoReply = true;
+
+        function initSparring() {
+            sparringBoard = Chessboard('sparring-board', {
+                draggable: true,
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: onSparringDrop
+            });
+            selectSparringOpening("scandi");
+        }
+
+        function setUserSide(side) {
+            activeUserSide = side;
+            ['white', 'black', 'both'].forEach(s => {
+                const btn = document.getElementById('btn-side-' + s);
+                if (btn) {
+                    btn.className = (s === side) ? 'px-2.5 py-1 bg-sky-600 text-white rounded font-bold transition' : 'px-2.5 py-1 text-slate-300 hover:text-white rounded font-bold transition';
+                }
+            });
+
+            if (side === "black") {
+                sparringBoard.orientation('black');
+            } else if (side === "white") {
+                sparringBoard.orientation('white');
+            }
+            updateSparringStatus();
+        }
+
+        function flipSparringBoard() {
+            const cur = sparringBoard.orientation();
+            sparringBoard.orientation(cur === 'white' ? 'black' : 'white');
+        }
+
+        function toggleBotAutoReply() {
+            botAutoReply = !botAutoReply;
+            const btn = document.getElementById('btn-bot-toggle');
+            if (botAutoReply) {
+                btn.innerText = "🤖 Bot: ON";
+                btn.className = "px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded border border-emerald-500/40 text-[11px] font-bold";
+            } else {
+                btn.innerText = "🤖 Bot: OFF (Sandbox)";
+                btn.className = "px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded border border-slate-600 text-[11px] font-bold";
+            }
+        }
+
+        function selectSparringOpening(key) {
+            currentSparringRep = sparringRepertoires[key] || sparringRepertoires.scandi;
+            document.getElementById('sparring-bot-tag').innerText = currentSparringRep.botTag;
+            
+            // Set user side automatically to match the chosen opening
+            setUserSide(currentSparringRep.userSide);
+
+            const wiContainer = document.getElementById('whatif-buttons-container');
+            const whatifs = currentSparringRep.whatifs || [];
+            if (whatifs.length > 0) {
+                wiContainer.innerHTML = whatifs.map((wi, i) => `
+                    <button onclick="loadWhatIfSequence(${i})" class="px-2 py-1 bg-slate-900 hover:bg-sky-700 text-slate-200 text-[11px] font-medium rounded border border-slate-700 transition">
+                        ${wi.label}
+                    </button>
+                `).join('');
+            } else {
+                wiContainer.innerHTML = `<span class="text-slate-500 italic text-[11px]">Free play active</span>`;
+            }
+
+            resetSparringGame();
+        }
+
+        function loadWhatIfSequence(idx) {
+            const wi = currentSparringRep.whatifs[idx];
+            if (!wi) return;
+            sparringGame.reset();
+            for (let san of wi.seq) sparringGame.move(san);
+            sparringBoard.position(sparringGame.fen());
+            clearSparringArrows();
+            updateSparringMovesUI();
+            updateSparringStatus();
+            updateSparringExplorerTable();
+            document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-amber-400 font-bold">🔀 Branch: ${wi.label}</span>`;
+            document.getElementById('sparring-feedback-sub').innerText = `Position: ${wi.seq.join(' ')}`;
+            playChessSound('move');
+        }
+
+        function resetSparringGame() {
+            sparringGame.reset();
+            sparringBoard.orientation(activeUserSide === 'black' ? 'black' : 'white');
+            sparringBoard.position('start');
+            clearSparringArrows();
+            updateSparringMovesUI();
+            updateSparringStatus();
+            updateSparringExplorerTable();
+
+            // If user is playing as Black and the opening has a defined bot start move:
+            if (activeUserSide === "black" && currentSparringRep.botStartMove) {
+                setTimeout(() => {
+                    const res = sparringGame.move(currentSparringRep.botStartMove);
+                    if (res) {
+                        sparringBoard.position(sparringGame.fen());
+                        updateSparringMovesUI();
+                        updateSparringStatus();
+                        updateSparringExplorerTable();
+                        playChessSound('move');
+                        document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-emerald-400 font-bold">📖 Bot Plays 1.${res.san}</span>`;
+                        document.getElementById('sparring-feedback-sub').innerText = `Your turn as Black! Play your response.`;
+                    }
+                }, 300);
+            } else {
+                document.getElementById('sparring-feedback-title').innerText = "Make your opening move!";
+                document.getElementById('sparring-feedback-sub').innerText = `Play on the board or click any move in the table.`;
+            }
+        }
+
+        async function fetchLichessMasterMoves(fen) {
+            try {
+                const url = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(fen)}&moves=5`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.moves && data.moves.length > 0) {
+                        return data.moves.map(m => {
+                            const tot = m.white + m.draws + m.black;
+                            const wPct = Math.round((m.white / Math.max(1, tot)) * 100);
+                            const dPct = Math.round((m.draws / Math.max(1, tot)) * 100);
+                            const bPct = Math.max(0, 100 - wPct - dPct);
+                            return {
+                                san: m.san,
+                                uci: m.uci,
+                                games: tot,
+                                w: wPct,
+                                d: dPct,
+                                b: bPct,
+                                name: data.opening ? data.opening.name : "Master Line",
+                                eval: (wPct > bPct + 10) ? "+0.4" : ((bPct > wPct + 10) ? "-0.4" : "0.0")
+                            };
+                        });
+                    }
+                }
+            } catch (e) {}
+
+            try {
+                const url2 = `https://explorer.lichess.ovh/lichess?ratings=1800,2000,2200,2500&speeds=blitz,rapid&fen=${encodeURIComponent(fen)}&moves=5`;
+                const res2 = await fetch(url2);
+                if (res2.ok) {
+                    const data2 = await res2.json();
+                    if (data2 && data2.moves && data2.moves.length > 0) {
+                        return data2.moves.map(m => {
+                            const tot = m.white + m.draws + m.black;
+                            const wPct = Math.round((m.white / Math.max(1, tot)) * 100);
+                            const dPct = Math.round((m.draws / Math.max(1, tot)) * 100);
+                            const bPct = Math.max(0, 100 - wPct - dPct);
+                            return {
+                                san: m.san,
+                                uci: m.uci,
+                                games: tot,
+                                w: wPct,
+                                d: dPct,
+                                b: bPct,
+                                name: data2.opening ? data2.opening.name : "Tournament Line",
+                                eval: (wPct > bPct + 10) ? "+0.3" : ((bPct > wPct + 10) ? "-0.3" : "0.0")
+                            };
+                        });
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        async function updateSparringExplorerTable() {
+            const hist = sparringGame.history().join(" ");
+            const fen = sparringGame.fen();
+            const turn = sparringGame.turn() === 'w' ? 'White' : 'Black';
+            const tbody = document.getElementById('sparring-explorer-tbody');
+            const evalBadge = document.getElementById('sparring-eval-badge');
+
+            // 1. Check local opening book first
+            let candidates = masterOpeningDatabase[hist] || null;
+
+            if (!candidates) {
+                // Try live Lichess Master API
+                evalBadge.innerText = "Querying Lichess Masters...";
+                const liveMoves = await fetchLichessMasterMoves(fen);
+                if (liveMoves && liveMoves.length > 0) {
+                    candidates = liveMoves;
+                }
+            }
+
+            if (!candidates || candidates.length === 0) {
+                const legals = sparringGame.moves({ verbose: true });
+                if (legals.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="py-2 text-center text-slate-500">Game Over</td></tr>`;
+                    evalBadge.innerText = "Game Over";
+                    return;
+                }
+                evalBadge.innerText = "Open Play";
+                tbody.innerHTML = legals.slice(0, 5).map(m => `
+                    <tr class="hover:bg-slate-700/40 cursor-pointer" onclick="forcePlaySparringMove('${m.san}')">
+                        <td class="py-1.5 px-3 font-bold text-slate-100">${m.san}</td>
+                        <td class="py-1.5 px-2 text-slate-400 text-[11px]">Legal Move</td>
+                        <td class="py-1.5 px-2 text-center text-slate-400 text-[11px]">--</td>
+                        <td class="py-1.5 px-2 text-center font-bold text-slate-300">0.0</td>
+                        <td class="py-1.5 px-3 text-center"><div class="eval-bar-container"><div class="bar-white" style="width:50%">50%</div><div class="bar-black" style="width:50%">50%</div></div></td>
+                        <td class="py-1.5 px-2 text-center">
+                            <button onclick="event.stopPropagation(); forcePlaySparringMove('${m.san}')" class="px-2 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10px] font-bold">Play</button>
+                        </td>
+                    </tr>
+                `).join('');
+                return;
+            }
+
+            evalBadge.innerText = `Master Book (${candidates[0].eval || '+0.2'})`;
+            tbody.innerHTML = candidates.map(c => `
+                <tr class="hover:bg-slate-700/40 cursor-pointer" onclick="forcePlaySparringMove('${c.san}')">
+                    <td class="py-1.5 px-3 font-bold text-slate-100">${c.san}</td>
+                    <td class="py-1.5 px-2 text-slate-300 text-[11px] font-sans">${c.name || ''}</td>
+                    <td class="py-1.5 px-2 text-center text-slate-400 text-[11px]">${c.games ? c.games.toLocaleString() : '--'}</td>
+                    <td class="py-1.5 px-2 text-center font-bold ${c.eval && c.eval.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}">${c.eval || '0.0'}</td>
+                    <td class="py-1.5 px-3 text-center">
+                        <div class="eval-bar-container">
+                            <div class="bar-white" style="width: ${c.w || 40}%">${c.w || 40}%</div>
+                            <div class="bar-draw" style="width: ${c.d || 30}%">${c.d || 30}%</div>
+                            <div class="bar-black" style="width: ${c.b || 30}%">${c.b || 30}%</div>
+                        </div>
+                    </td>
+                    <td class="py-1.5 px-2 text-center">
+                        <button onclick="event.stopPropagation(); forcePlaySparringMove('${c.san}')" class="px-2 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10px] font-bold transition">
+                            ▶ Play
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function evaluateTacticalMoveScore(move, game) {
+            let score = 0;
+            const pieceValues = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+            // Material capture bonus
+            if (move.captured) score += pieceValues[move.captured] * 10;
+            if (move.promotion) score += pieceValues[move.promotion] * 10;
+
+            // Center control bonus (e4, d4, e5, d5, c4, c5, f4, f5)
+            const centerSquares = ['e4', 'd4', 'e5', 'd5', 'c4', 'c5', 'f4', 'f5'];
+            if (centerSquares.includes(move.to)) score += 40;
+
+            // Piece development bonus
+            if (move.piece === 'n' || move.piece === 'b') {
+                if (['c3', 'f3', 'c6', 'f6', 'd2', 'e2', 'd7', 'e7'].includes(move.to)) score += 30;
+            }
+
+            // Castling bonus
+            if (move.san === 'O-O' || move.san === 'O-O-O') score += 60;
+
+            // Avoid rim knight moves like Na6/Nh6/Na3/Nh3 on opening moves
+            if (move.piece === 'n' && ['a6', 'h6', 'a3', 'h3'].includes(move.to)) score -= 50;
+
+            return score;
+        }
+
+        async function makeBotMove() {
+            if (sparringGame.game_over()) return;
+
+            const hist = sparringGame.history().join(" ");
+            let chosenMove = null;
+
+            // 1. Check local master opening book
+            const candidates = masterOpeningDatabase[hist] || [];
+            if (candidates.length > 0) {
+                chosenMove = candidates[0].san;
+            }
+
+            // 2. Query Live Lichess Master Opening API
+            if (!chosenMove) {
+                const liveMoves = await fetchLichessMasterMoves(sparringGame.fen());
+                if (liveMoves && liveMoves.length > 0) {
+                    chosenMove = liveMoves[0].san;
+                }
+            }
+
+            // 3. Smart tactical positional fallback (never silly moves like Na6!)
+            if (!chosenMove) {
+                const legals = sparringGame.moves({ verbose: true });
+                if (legals.length > 0) {
+                    legals.sort((a, b) => evaluateTacticalMoveScore(b, sparringGame) - evaluateTacticalMoveScore(a, sparringGame));
+                    chosenMove = legals[0].san;
+                }
+            }
+
+            if (chosenMove) {
+                const res = sparringGame.move(chosenMove);
+                if (res) {
+                    sparringBoard.position(sparringGame.fen());
+                    updateSparringMovesUI();
+                    updateSparringStatus();
+                    updateSparringExplorerTable();
+                    playChessSound(res.captured ? 'capture' : 'move');
+                    document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-emerald-400 font-bold">📖 Bot Plays: ${res.san}</span>`;
+                }
+            }
+        }
+
+        function undoSparringMove() {
+            sparringGame.undo();
+            sparringBoard.position(sparringGame.fen());
+            clearSparringArrows();
+            updateSparringMovesUI();
+            updateSparringStatus();
+            updateSparringExplorerTable();
+            playChessSound('move');
+        }
+
+        function showSparringHint() {
+            const legals = sparringGame.moves({ verbose: true });
+            if (legals.length === 0) return;
+            const best = legals[0];
+            drawSparringArrow(best.from, best.to, "#22c55e", "spar-green");
+            document.getElementById('sparring-feedback-sub').innerHTML = `<span class="text-amber-400 font-bold">💡 Best Move:</span> <strong>${best.san}</strong>`;
+        }
+
+        function updateSparringStatus() {
+            const turn = sparringGame.turn() === 'w' ? 'White' : 'Black';
+            const isUser = (activeUserSide === 'both' || turn.toLowerCase() === activeUserSide);
+            const moveNum = Math.floor(sparringGame.history().length / 2) + 1;
+            document.getElementById('sparring-game-status').innerText = `Move ${moveNum} | ${isUser ? 'Your Turn (' + turn + ')' : 'PC Thinking...'}`;
+        }
+
+        function updateSparringMovesUI() {
+            const moves = sparringGame.history();
+            const container = document.getElementById('sparring-moves-list');
+            if (moves.length === 0) {
+                container.innerHTML = `<span class="text-slate-500 italic">No moves played yet</span>`;
+                return;
+            }
+            container.innerHTML = moves.map((m, i) => {
+                const num = Math.floor(i/2) + 1;
+                const pref = (i % 2 === 0) ? `${num}. ` : '';
+                return `<span class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 border border-slate-700">${pref}${m}</span>`;
+            }).join('');
+        }
+
+        function drawSparringArrow(fromSq, toSq, color, markerId) {
+            const svg = document.getElementById('sparring-arrows-svg');
+            if (!svg) return;
+            const boardEl = document.getElementById('sparring-board');
+            const boardWidth = boardEl ? boardEl.clientWidth : 420;
+            const orientation = sparringBoard ? sparringBoard.orientation() : 'white';
+            svg.innerHTML = `
+                <defs>
+                    <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
+                    </marker>
+                </defs>
+                ${drawSvgArrow(fromSq, toSq, color, markerId, orientation, boardWidth, false)}
+            `;
+        }
+
+        function clearSparringArrows() {
+            const svg = document.getElementById('sparring-arrows-svg');
+            if (svg) svg.innerHTML = "";
         }
 
         // ==========================================
@@ -772,41 +1370,163 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
             document.getElementById('weak-best-option').innerText = activeWeakness.best_option;
             document.getElementById('weak-why-reason').innerText = activeWeakness.why_reason;
 
-            resetWeaknessBoard();
+            initWeaknessLineSequence();
             renderWeaknessList();
         }
 
-        function resetWeaknessBoard() {
+        let activeWeaknessStep = 0;
+        let weaknessFens = [];
+        let weaknessMovesSan = [];
+        let weaknessMovesUci = [];
+        let autoPlayTimer = null;
+
+        function initWeaknessLineSequence() {
             if (!activeWeakness) return;
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+
+            weaknessMovesSan = activeWeakness.line_san || (activeWeakness.refutation_san ? [activeWeakness.refutation_san] : []);
+            weaknessMovesUci = activeWeakness.line_uci || (activeWeakness.refutation_uci ? [activeWeakness.refutation_uci] : []);
+
+            // Generate FEN sequence using chess.js
             weaknessGame.load(activeWeakness.fen_setup);
-            weaknessBoard.orientation(activeWeakness.side.toLowerCase());
-            weaknessBoard.position(activeWeakness.fen_setup);
-            renderWeaknessArrow();
-        }
+            weaknessFens = [weaknessGame.fen()];
 
-        function playWeaknessRefutationAnimation() {
-            if (!activeWeakness) return;
-            resetWeaknessBoard();
-            setTimeout(() => {
-                const uci = activeWeakness.refutation_uci;
+            for (let uci of weaknessMovesUci) {
                 if (uci && uci.length >= 4) {
-                    weaknessGame.move({ from: uci.substring(0, 2), to: uci.substring(2, 4), promotion: 'q' });
-                    weaknessBoard.position(weaknessGame.fen());
-                    playChessSound('move');
-                    clearWeaknessArrows();
+                    const res = weaknessGame.move({ from: uci.substring(0, 2), to: uci.substring(2, 4), promotion: 'q' });
+                    if (res) weaknessFens.push(weaknessGame.fen());
                 }
-            }, 300);
+            }
+
+            // Render pills
+            const container = document.getElementById('weak-line-moves');
+            if (container) {
+                container.innerHTML = weaknessMovesSan.map((m, i) => {
+                    return `<button onclick="jumpToWeaknessStep(${i+1})" id="wstep-pill-${i+1}" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold transition">${i+1}. ${m}</button>`;
+                }).join('');
+            }
+
+            activeWeaknessStep = 0;
+            updateWeaknessStepUI();
         }
 
-        function renderWeaknessArrow() {
+        function resetWeaknessBoard() {
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+            activeWeaknessStep = 0;
+            updateWeaknessStepUI();
+        }
+
+        function updateWeaknessStepUI() {
+            if (!activeWeakness || weaknessFens.length === 0) return;
+            if (activeWeaknessStep < 0) activeWeaknessStep = 0;
+            if (activeWeaknessStep >= weaknessFens.length) activeWeaknessStep = weaknessFens.length - 1;
+
+            weaknessBoard.orientation(activeWeakness.side.toLowerCase());
+            weaknessBoard.position(weaknessFens[activeWeaknessStep]);
+
+            document.getElementById('weak-step-count').innerText = `Step ${activeWeaknessStep} / ${weaknessMovesSan.length}`;
+            
+            const badge = document.getElementById('weak-step-badge');
+            if (activeWeaknessStep === 0) {
+                badge.innerText = "Setup Position";
+                badge.className = "text-sky-400 font-mono font-bold";
+            } else {
+                const moveSan = weaknessMovesSan[activeWeaknessStep - 1];
+                badge.innerText = `Move ${activeWeaknessStep}: ${moveSan}`;
+                badge.className = "text-emerald-400 font-mono font-bold";
+            }
+
+            // Highlight pill
+            document.querySelectorAll('#weak-line-moves button').forEach((btn, idx) => {
+                if (idx + 1 === activeWeaknessStep) {
+                    btn.className = "px-2 py-0.5 rounded bg-emerald-600 border border-emerald-400 text-white font-bold transition shadow";
+                } else {
+                    btn.className = "px-2 py-0.5 rounded bg-slate-900 border border-slate-700 hover:bg-slate-700 text-slate-300 font-bold transition";
+                }
+            });
+
+            renderWeaknessArrowForStep();
+        }
+
+        function weaknessNext() {
+            if (activeWeaknessStep < weaknessFens.length - 1) {
+                activeWeaknessStep++;
+                updateWeaknessStepUI();
+                playChessSound('move');
+            }
+        }
+
+        function weaknessPrev() {
+            if (activeWeaknessStep > 0) {
+                activeWeaknessStep--;
+                updateWeaknessStepUI();
+                playChessSound('move');
+            }
+        }
+
+        function weaknessFirst() {
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+            activeWeaknessStep = 0;
+            updateWeaknessStepUI();
+            playChessSound('move');
+        }
+
+        function weaknessLast() {
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+            activeWeaknessStep = weaknessFens.length - 1;
+            updateWeaknessStepUI();
+            playChessSound('move');
+        }
+
+        function jumpToWeaknessStep(step) {
+            if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+            activeWeaknessStep = step;
+            updateWeaknessStepUI();
+            playChessSound('move');
+        }
+
+        function autoPlayWeaknessLine() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                document.getElementById('btn-weak-autoplay').innerHTML = `<span>▶</span> Auto-Play Line`;
+                return;
+            }
+
+            activeWeaknessStep = 0;
+            updateWeaknessStepUI();
+            document.getElementById('btn-weak-autoplay').innerHTML = `<span>⏸</span> Pause`;
+
+            autoPlayTimer = setInterval(() => {
+                if (activeWeaknessStep < weaknessFens.length - 1) {
+                    activeWeaknessStep++;
+                    updateWeaknessStepUI();
+                    playChessSound('move');
+                } else {
+                    clearInterval(autoPlayTimer);
+                    autoPlayTimer = null;
+                    document.getElementById('btn-weak-autoplay').innerHTML = `<span>▶</span> Auto-Play Line`;
+                }
+            }, 750);
+        }
+
+        function renderWeaknessArrowForStep() {
             const svg = document.getElementById('weakness-arrows-svg');
-            if (!svg || !activeWeakness || !activeWeakness.refutation_uci) return;
+            if (!svg || !activeWeakness) return;
+
+            // Show arrow for the upcoming move
+            let uci = null;
+            if (activeWeaknessStep < weaknessMovesUci.length) {
+                uci = weaknessMovesUci[activeWeaknessStep];
+            } else if (activeWeaknessStep > 0) {
+                uci = weaknessMovesUci[activeWeaknessStep - 1];
+            }
+
+            if (!uci || uci.length < 4) { svg.innerHTML = ""; return; }
 
             const boardEl = document.getElementById('weakness-board');
             const boardWidth = boardEl ? boardEl.clientWidth : 420;
             const orientation = activeWeakness.side.toLowerCase();
-            const uci = activeWeakness.refutation_uci;
-
             const fromSq = uci.substring(0, 2);
             const toSq = uci.substring(2, 4);
 
@@ -1146,349 +1866,13 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         function replayLast() { currentPly = currentFens.length - 1; updateReplayStatus(); }
         function jumpToPly(ply) { currentPly = ply; updateReplayStatus(); playChessSound('move'); }
 
-        // ==========================================
-        // ⚔️ SPARRING BOT & WHAT-IF
-        // ==========================================
-        const masterOpeningDatabase = {
-            "": [
-                { san: "e4", games: 2450000, eval: "+0.3", w: 38, d: 34, b: 28, name: "King's Pawn Opening" },
-                { san: "d4", games: 2180000, eval: "+0.3", w: 38, d: 35, b: 27, name: "Queen's Pawn Opening" },
-                { san: "Nf3", games: 520000, eval: "+0.2", w: 36, d: 37, b: 27, name: "Zukertort / Réti" }
-            ],
-            "e4": [
-                { san: "e5", games: 980000, eval: "+0.3", w: 37, d: 33, b: 30, name: "Open Game (1...e5)" },
-                { san: "c5", games: 890000, eval: "+0.2", w: 36, d: 34, b: 30, name: "Sicilian Defense" },
-                { san: "d5", games: 320000, eval: "+0.4", w: 42, d: 29, b: 29, name: "Scandinavian Defense" }
-            ],
-            "e4 d5": [
-                { san: "exd5", games: 280000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Mainline Accepted" },
-                { san: "e5", games: 14000, eval: "-0.2", w: 31, d: 28, b: 41, name: "Advance Variation" }
-            ],
-            "e4 d5 exd5": [
-                { san: "Qxd5", games: 195000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Mieses-Kotroc Mainline" },
-                { san: "Nf6", games: 78000, eval: "+0.5", w: 43, d: 29, b: 28, name: "Modern / Portuguese Variation" }
-            ],
-            "e4 d5 exd5 Qxd5": [
-                { san: "Nc3", games: 185000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Develop with Tempo" }
-            ],
-            "e4 d5 exd5 Qxd5 Nc3": [
-                { san: "Qa5", games: 110000, eval: "+0.4", w: 41, d: 31, b: 28, name: "Classical Mainline (Qa5)" },
-                { san: "Qd6", games: 52000, eval: "+0.4", w: 42, d: 30, b: 28, name: "Gubinsky-Melts (Qd6)" }
-            ],
-            "d4": [
-                { san: "d5", games: 920000, eval: "+0.3", w: 38, d: 35, b: 27, name: "Closed Game (1...d5)" },
-                { san: "Nf6", games: 880000, eval: "+0.3", w: 37, d: 36, b: 27, name: "Indian Defenses" },
-                { san: "e5", games: 32000, eval: "+1.6", w: 62, d: 18, b: 20, name: "Englund Gambit" }
-            ],
-            "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+": [
-                { san: "Bd2!", games: 10500, eval: "+3.5", w: 74, d: 14, b: 12, name: "The Winning Refutation!" },
-                { san: "Qd2??", games: 2200, eval: "-6.2", w: 8, d: 6, b: 86, name: "Blunder! Loses to Qxb2" }
-            ]
-        };
-
-        const sparringRepertoires = {
-            scandi: {
-                title: "⚪ White vs 🤖 Scandinavian Defense",
-                userSide: "white",
-                expectedFirst: "e4",
-                botTag: "Bot: Scandinavian",
-                whatifs: [
-                    { label: "▶ 2...Qxd5 (Mainline Qa5)", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5"] },
-                    { label: "▶ 2...Nf6 (Portuguese)", seq: ["e4", "d5", "exd5", "Nf6"] },
-                    { label: "▶ 2.e5 (Advance Bf5)", seq: ["e4", "d5", "e5", "Bf5"] }
-                ]
-            },
-            englund: {
-                title: "⚪ White vs 🤖 Englund Gambit",
-                userSide: "white",
-                expectedFirst: "d4",
-                botTag: "Bot: Englund Gambit",
-                whatifs: [
-                    { label: "▶ Refute Trap (5.Bd2! Qxb2 6.Nc3!)", seq: ["d4", "e5", "dxe5", "Nc6", "Nf3", "Qe7", "Bf4", "Qb4+", "Bd2", "Qxb2", "Nc3"] }
-                ]
-            },
-            scandi_black: {
-                title: "⚫ Black vs 🤖 Scandinavian 2.e5",
-                userSide: "black",
-                expectedFirst: "d5",
-                botTag: "Bot: Scandi 2.e5",
-                whatifs: [
-                    { label: "▶ 2.e5 Bf5! (Bishop Free)", seq: ["e4", "d5", "e5", "Bf5", "d4", "e6", "Nf3", "c5"] }
-                ]
-            },
-            london_black: {
-                title: "⚫ Black vs 🤖 London System",
-                userSide: "black",
-                expectedFirst: "d5",
-                botTag: "Bot: London System",
-                whatifs: [
-                    { label: "▶ 2...c5! 4...Qb6! (Counter-Attack)", seq: ["d4", "d5", "Bf4", "c5", "e3", "Nc6", "Nf3", "Qb6"] }
-                ]
-            },
-            danish_black: {
-                title: "⚫ Black vs 🤖 Danish Gambit",
-                userSide: "black",
-                expectedFirst: "e5",
-                botTag: "Bot: Danish Gambit",
-                whatifs: [
-                    { label: "▶ 5...d5!! (Schlechter Refutation)", seq: ["e4", "e5", "d4", "exd4", "c3", "dxc3", "Bc4", "cxb2", "Bxb2", "d5"] }
-                ]
-            },
-            reti_black: {
-                title: "⚫ Black vs 🤖 Reti Opening",
-                userSide: "black",
-                expectedFirst: "d5",
-                botTag: "Bot: Reti Opening",
-                whatifs: [
-                    { label: "▶ 2...d4! (Space Wedge)", seq: ["Nf3", "d5", "c4", "d4"] }
-                ]
-            }
-        };
-
-        let sparringBoard = null;
-        let sparringGame = new Chess();
-        let currentSparringRep = sparringRepertoires.scandi;
-
-        function initSparring() {
-            sparringBoard = Chessboard('sparring-board', {
-                draggable: true,
-                position: 'start',
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: onSparringDrop
-            });
-            selectSparringOpening("scandi");
-        }
-
-        function selectSparringOpening(key) {
-            currentSparringRep = sparringRepertoires[key] || sparringRepertoires.scandi;
-            document.getElementById('sparring-bot-tag').innerText = currentSparringRep.botTag;
-            
-            const wiContainer = document.getElementById('whatif-buttons-container');
-            const whatifs = currentSparringRep.whatifs || [];
-            if (whatifs.length > 0) {
-                wiContainer.innerHTML = whatifs.map((wi, i) => `
-                    <button onclick="loadWhatIfSequence(${i})" class="px-2 py-1 bg-slate-900 hover:bg-sky-700 text-slate-200 text-[11px] font-medium rounded border border-slate-700 transition">
-                        ${wi.label}
-                    </button>
-                `).join('');
-            } else {
-                wiContainer.innerHTML = `<span class="text-slate-500 italic text-[11px]">Free play active</span>`;
-            }
-
-            resetSparringGame();
-        }
-
-        function loadWhatIfSequence(idx) {
-            const wi = currentSparringRep.whatifs[idx];
-            if (!wi) return;
-            sparringGame.reset();
-            for (let san of wi.seq) sparringGame.move(san);
-            sparringBoard.position(sparringGame.fen());
-            clearSparringArrows();
-            updateSparringMovesUI();
-            updateSparringStatus();
-            updateSparringExplorerTable();
-            document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-amber-400 font-bold">🔀 Branch: ${wi.label}</span>`;
-            document.getElementById('sparring-feedback-sub').innerText = `Position: ${wi.seq.join(' ')}`;
-            playChessSound('move');
-        }
-
-        function resetSparringGame() {
-            sparringGame.reset();
-            sparringBoard.orientation(currentSparringRep.userSide);
-            sparringBoard.position('start');
-            clearSparringArrows();
-            updateSparringStatus();
-            updateSparringMovesUI();
-            updateSparringExplorerTable();
-
-            document.getElementById('sparring-feedback-title').innerText = "Make your opening move!";
-            if (currentSparringRep.userSide === "white") {
-                document.getElementById('sparring-feedback-sub').innerText = `Start with 1.${currentSparringRep.expectedFirst} for ${currentSparringRep.title}.`;
-            } else {
-                document.getElementById('sparring-feedback-sub').innerText = "PC is playing White. Waiting for opening move...";
-                setTimeout(makeBotMove, 400);
-            }
-        }
-
-        function updateSparringExplorerTable() {
-            const hist = sparringGame.history().join(" ");
-            const turn = sparringGame.turn() === 'w' ? 'White' : 'Black';
-            const isUserTurn = (turn.toLowerCase() === currentSparringRep.userSide);
-            const candidates = masterOpeningDatabase[hist] || [];
-            const tbody = document.getElementById('sparring-explorer-tbody');
-            const evalBadge = document.getElementById('sparring-eval-badge');
-
-            if (candidates.length === 0) {
-                const legals = sparringGame.moves({ verbose: true });
-                if (legals.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="py-2 text-center text-slate-500">Game Over</td></tr>`;
-                    evalBadge.innerText = "Game Over";
-                    return;
-                }
-                evalBadge.innerText = "Open Play";
-                tbody.innerHTML = legals.slice(0, 5).map(m => `
-                    <tr class="hover:bg-slate-700/40 cursor-pointer" onclick="forcePlaySparringMove('${m.san}')">
-                        <td class="py-1.5 px-3 font-bold text-slate-100">${m.san}</td>
-                        <td class="py-1.5 px-2 text-slate-400 text-[11px]">Legal Move</td>
-                        <td class="py-1.5 px-2 text-center text-slate-400 text-[11px]">--</td>
-                        <td class="py-1.5 px-2 text-center font-bold text-slate-300">0.0</td>
-                        <td class="py-1.5 px-3 text-center"><div class="eval-bar-container"><div class="bar-white" style="width:50%">50%</div><div class="bar-black" style="width:50%">50%</div></div></td>
-                        <td class="py-1.5 px-2 text-center">
-                            <button onclick="event.stopPropagation(); forcePlaySparringMove('${m.san}')" class="px-2 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10px] font-bold">${isUserTurn ? 'Play' : 'Force Bot'}</button>
-                        </td>
-                    </tr>
-                `).join('');
-                return;
-            }
-
-            evalBadge.innerText = `Master Book (${candidates[0].eval})`;
-            tbody.innerHTML = candidates.map(c => `
-                <tr class="hover:bg-slate-700/40 cursor-pointer" onclick="forcePlaySparringMove('${c.san}')">
-                    <td class="py-1.5 px-3 font-bold text-slate-100">${c.san}</td>
-                    <td class="py-1.5 px-2 text-slate-300 text-[11px] font-sans">${c.name || ''}</td>
-                    <td class="py-1.5 px-2 text-center text-slate-400 text-[11px]">${c.games.toLocaleString()}</td>
-                    <td class="py-1.5 px-2 text-center font-bold ${c.eval.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}">${c.eval}</td>
-                    <td class="py-1.5 px-3 text-center">
-                        <div class="eval-bar-container">
-                            <div class="bar-white" style="width: ${c.w}%">${c.w}%</div>
-                            <div class="bar-draw" style="width: ${c.d}%">${c.d}%</div>
-                            <div class="bar-black" style="width: ${c.b}%">${c.b}%</div>
-                        </div>
-                    </td>
-                    <td class="py-1.5 px-2 text-center">
-                        <button onclick="event.stopPropagation(); forcePlaySparringMove('${c.san}')" class="px-2 py-0.5 ${isUserTurn ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-sky-600 hover:bg-sky-500'} text-white rounded text-[10px] font-bold transition">
-                            ${isUserTurn ? '▶ Play' : '🤖 Force Bot'}
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function forcePlaySparringMove(sanMove) {
-            const move = sparringGame.move(sanMove);
-            if (!move) return;
-
-            sparringBoard.position(sparringGame.fen());
-            clearSparringArrows();
-            updateSparringMovesUI();
-            updateSparringStatus();
-            updateSparringExplorerTable();
-            playChessSound(move.captured ? 'capture' : 'move');
-
-            if (sparringGame.game_over()) return;
-            const turn = sparringGame.turn() === 'w' ? 'white' : 'black';
-            if (turn !== currentSparringRep.userSide) setTimeout(makeBotMove, 300);
-        }
-
-        function onSparringDrop(source, target) {
-            const turn = sparringGame.turn() === 'w' ? 'white' : 'black';
-            if (turn !== currentSparringRep.userSide) return 'snapback';
-
-            const move = sparringGame.move({ from: source, to: target, promotion: 'q' });
-            if (move === null) return 'snapback';
-
-            clearSparringArrows();
-            updateSparringMovesUI();
-            updateSparringStatus();
-            updateSparringExplorerTable();
-            playChessSound(move.captured ? 'capture' : 'move');
-
-            if (sparringGame.game_over()) return;
-            setTimeout(makeBotMove, 300);
-        }
-
-        function makeBotMove() {
-            if (sparringGame.game_over()) return;
-            const hist = sparringGame.history().join(" ");
-            const candidates = masterOpeningDatabase[hist] || [];
-            let chosenMove = candidates.length > 0 ? candidates[0].san : null;
-
-            if (!chosenMove) {
-                const legals = sparringGame.moves({ verbose: true });
-                if (legals.length > 0) chosenMove = legals[0].san;
-            }
-
-            if (chosenMove) {
-                const res = sparringGame.move(chosenMove);
-                if (res) {
-                    sparringBoard.position(sparringGame.fen());
-                    updateSparringMovesUI();
-                    updateSparringStatus();
-                    updateSparringExplorerTable();
-                    playChessSound(res.captured ? 'capture' : 'move');
-                    document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-emerald-400 font-bold">📖 Bot Plays: ${res.san}</span>`;
-                }
-            }
-        }
-
-        function undoSparringMove() {
-            sparringGame.undo(); sparringGame.undo();
-            sparringBoard.position(sparringGame.fen());
-            clearSparringArrows();
-            updateSparringMovesUI();
-            updateSparringStatus();
-            updateSparringExplorerTable();
-            playChessSound('move');
-        }
-
-        function showSparringHint() {
-            const legals = sparringGame.moves({ verbose: true });
-            if (legals.length === 0) return;
-            const best = legals[0];
-            drawSparringArrow(best.from, best.to, "#22c55e", "spar-green");
-            document.getElementById('sparring-feedback-sub').innerHTML = `<span class="text-amber-400 font-bold">💡 Best Move:</span> <strong>${best.san}</strong>`;
-        }
-
-        function updateSparringStatus() {
-            const turn = sparringGame.turn() === 'w' ? 'White' : 'Black';
-            const isUser = (turn.toLowerCase() === currentSparringRep.userSide);
-            const moveNum = Math.floor(sparringGame.history().length / 2) + 1;
-            document.getElementById('sparring-game-status').innerText = `Move ${moveNum} | ${isUser ? 'Your Turn (' + turn + ')' : 'PC Thinking...'}`;
-        }
-
-        function updateSparringMovesUI() {
-            const moves = sparringGame.history();
-            const container = document.getElementById('sparring-moves-list');
-            if (moves.length === 0) {
-                container.innerHTML = `<span class="text-slate-500 italic">No moves played yet</span>`;
-                return;
-            }
-            container.innerHTML = moves.map((m, i) => {
-                const num = Math.floor(i/2) + 1;
-                const pref = (i % 2 === 0) ? `${num}. ` : '';
-                return `<span class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 border border-slate-700">${pref}${m}</span>`;
-            }).join('');
-        }
-
-        function drawSparringArrow(fromSq, toSq, color, markerId) {
-            const svg = document.getElementById('sparring-arrows-svg');
-            if (!svg) return;
-            const boardEl = document.getElementById('sparring-board');
-            const boardWidth = boardEl ? boardEl.clientWidth : 420;
-            const orientation = currentSparringRep.userSide;
-            svg.innerHTML = `
-                <defs>
-                    <marker id="spar-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#22c55e" />
-                    </marker>
-                </defs>
-                ${drawSvgArrow(fromSq, toSq, color, markerId, orientation, boardWidth, false)}
-            `;
-        }
-
-        function clearSparringArrows() {
-            const svg = document.getElementById('sparring-arrows-svg');
-            if (svg) svg.innerHTML = "";
-        }
-
         $(document).ready(function() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js').catch(function() {});
             }
+            initSparring();
             initWeaknessView();
             initReplayer();
-            initSparring();
         });
     </script>
 </body>
@@ -1509,11 +1893,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
 
-    # Also save as index.html for instant GitHub Pages / PWA root access
     index_path = os.path.join(os.path.dirname(output_path), "index.html")
     with open(index_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
 
-    print(f"Generated interactive dashboard with separated Opening Weaknesses & Blunders: {output_path}")
+    print(f"Generated interactive dashboard with free move & Black side support: {output_path}")
     print(f"Generated PWA & GitHub Pages entry: {index_path}")
     return output_path
