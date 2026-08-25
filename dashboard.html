@@ -113,11 +113,12 @@
 
                         <select id="sparring-opening-select" onchange="selectSparringOpening(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:border-sky-500 font-medium">
                             <optgroup label="⚪ Practice As White (PC Plays As Black):">
-                                <option value="scandi">⚪ White vs 🤖 Scandinavian Defense (PC plays 1...d5 & 2...Qxd5/Nf6)</option>
-                                <option value="englund">⚪ White vs 🤖 Englund Gambit (PC plays 1...e5 2...Nc6 & 4...Qb4+)</option>
-                                <option value="sicilian">⚪ White vs 🤖 Sicilian Defense (PC plays 1...c5 & Open Sicilian)</option>
-                                <option value="french">⚪ White vs 🤖 French Defense (PC plays 1...e6 & 2...d5)</option>
-                                <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (PC plays 1...c6 & 2...d5)</option>
+                                <option value="scandi">⚪ White vs 🤖 Scandinavian Defense (Start with 1.e4 -> PC plays 1...d5)</option>
+                                <option value="englund">⚪ White vs 🤖 Englund Gambit (Start with 1.d4 -> PC plays 1...e5 2...Nc6 & 4...Qb4+)</option>
+                                <option value="qg_white">⚪ White Queen's Gambit Practice (Start with 1.d4 d5 2.c4 -> PC plays QGD/Slav)</option>
+                                <option value="sicilian">⚪ White vs 🤖 Sicilian Defense (Start with 1.e4 -> PC plays 1...c5)</option>
+                                <option value="french">⚪ White vs 🤖 French Defense (Start with 1.e4 -> PC plays 1...e6)</option>
+                                <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (Start with 1.e4 -> PC plays 1...c6)</option>
                             </optgroup>
                             <optgroup label="⚫ Practice As Black (PC Plays As White):">
                                 <option value="scandi_black">⚫ Black vs 🤖 Scandinavian 2.e5 (PC plays 1.e4 d5 2.e5 - Drill 2...Bf5!)</option>
@@ -133,7 +134,7 @@
                                 <span>🎯</span> Sparring Goal:
                             </div>
                             <p id="sparring-goal-desc" class="text-slate-300 leading-relaxed">
-                                Practice punishing the Scandinavian Defense. Develop actively and attack Black's exposed early Queen.
+                                Practice punishing the Scandinavian Defense. Start with 1.e4. When Black plays 1...d5, take with 2.exd5 and develop 3.Nc3!
                             </p>
                         </div>
                     </div>
@@ -144,7 +145,7 @@
                             <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wide flex items-center gap-1.5">
                                 <span>⚡</span> Live Sparring Feedback & Book Check
                             </h3>
-                            <span id="sparring-eval-badge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded font-mono font-bold">Book Line (+0.4)</span>
+                            <span id="sparring-eval-badge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded font-mono font-bold">Ready</span>
                         </div>
 
                         <div id="sparring-feedback-box" class="bg-slate-900/90 border border-slate-700 p-3 rounded-lg text-xs space-y-1">
@@ -393,7 +394,6 @@
 
         <!-- TAB 3: TOP 10 WINNING & LOSING OPENINGS -->
         <section id="view-overview" class="hidden space-y-6">
-            <!-- Top Metric Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700">
                     <div class="text-xs text-slate-400 uppercase font-semibold">Total Games</div>
@@ -417,7 +417,6 @@
                 </div>
             </div>
 
-            <!-- Queen's Pawn Explanation Banner -->
             <div class="bg-amber-950/40 border border-amber-600/50 rounded-xl p-5">
                 <h3 class="text-base font-bold text-amber-300 flex items-center gap-2">
                     <span>👑</span> Why You Are Losing With Queen's Pawn (1.d4) as White
@@ -437,9 +436,7 @@
                 </div>
             </div>
 
-            <!-- TOP 10 TABLES GRID -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- White Top 10 Winning -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
                     <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center justify-between">
                         <span>🏆 Top 10 WINNING Openings as White</span>
@@ -460,7 +457,6 @@
                     </div>
                 </div>
 
-                <!-- White Top 10 Losing -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
                     <h3 class="text-sm font-bold text-rose-400 mb-3 flex items-center justify-between">
                         <span>⚠️ Top 10 LOSING Openings as White</span>
@@ -481,7 +477,6 @@
                     </div>
                 </div>
 
-                <!-- Black Top 10 Winning -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
                     <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center justify-between">
                         <span>🏆 Top 10 WINNING Openings as Black</span>
@@ -502,7 +497,6 @@
                     </div>
                 </div>
 
-                <!-- Black Top 10 Losing -->
                 <div class="bg-slate-800/80 rounded-xl border border-slate-700 p-5">
                     <h3 class="text-sm font-bold text-rose-400 mb-3 flex items-center justify-between">
                         <span>⚠️ Top 10 LOSING Openings as Black</span>
@@ -721,22 +715,24 @@
         }
 
         // ==========================================
-        // ⚔️ OPENING SPARRING BOT ENGINE (PLAY VS PC)
+        // ⚔️ MASTER OPENING SPARRING BOT ENGINE
         // ==========================================
         const sparringRepertoires = {
             scandi: {
                 title: "⚪ White vs 🤖 Scandinavian Defense",
                 userSide: "white",
-                goal: "Black will strictly play the Scandinavian (1...d5). Choose 2.exd5 or 2.Nc3/2.d4. If 2.exd5 Qxd5, play 3.Nc3! gaining tempo on Black's queen.",
-                botTag: "Bot Locked: Scandinavian",
+                expectedFirst: "e4",
+                goal: "To practice against Scandinavian Defense, start with 1.e4. Black will play 1...d5. Take with 2.exd5 and gain tempo on Black's queen with 3.Nc3!",
+                botTag: "Bot Locked: Scandinavian (1.e4 d5)",
                 tree: {
-                    "": ["e4", "d4"],
                     "e4": ["d5"],
                     "e4 d5 exd5": ["Qxd5", "Nf6"],
                     "e4 d5 exd5 Qxd5": ["Nc3"],
-                    "e4 d5 exd5 Qxd5 Nc3": ["Qa5", "Qd8", "Qd6"],
-                    "e4 d5 exd5 Qxd5 Nc3 Qa5": ["d4"],
+                    "e4 d5 exd5 Qxd5 Nc3": ["Qa5", "Qd6", "Qd8"],
+                    "e4 d5 exd5 Qxd5 Nc3 Qa5": ["d4", "Nf3"],
                     "e4 d5 exd5 Qxd5 Nc3 Qa5 d4": ["Nf6", "c6"],
+                    "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 Nf6": ["Nf3"],
+                    "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 Nf6 Nf3": ["Bf5", "c6", "Bg4"],
                     "e4 d5 exd5 Nf6": ["d4", "c4", "Nf3"],
                     "e4 d5 exd5 Nf6 d4": ["Nxd5"],
                     "e4 d5 e5": ["Bf5", "c5"],
@@ -746,10 +742,10 @@
             englund: {
                 title: "⚪ White vs 🤖 Englund Gambit",
                 userSide: "white",
-                goal: "Black will play 1...e5 2...Nc6 3...Qe7 4...Qb4+. Play 5.Bd2! and 6.Nc3! to completely refute Black's trap and reach +3.5 advantage!",
-                botTag: "Bot Locked: Englund Gambit",
+                expectedFirst: "d4",
+                goal: "Start with 1.d4. Black will play the Englund Gambit (1...e5 2.dxe5 Nc6 3.Nf3 Qe7 4.Bf4 Qb4+). Refute it with 5.Bd2! Qxb2 6.Nc3! (+3.5 White).",
+                botTag: "Bot Locked: Englund Gambit (1.d4 e5)",
                 tree: {
-                    "": ["d4"],
                     "d4": ["e5"],
                     "d4 e5 dxe5": ["Nc6"],
                     "d4 e5 dxe5 Nc6 Nf3": ["Qe7"],
@@ -758,13 +754,29 @@
                     "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+ Bd2 Qxb2 Nc3": ["Bb4", "Nb4"]
                 }
             },
+            qg_white: {
+                title: "⚪ White Queen's Gambit Practice",
+                userSide: "white",
+                expectedFirst: "d4",
+                goal: "Play 1.d4 d5 2.c4! to control the center. Black will respond with QGD (2...e6), Slav (2...c6) or QGA (2...dxc4).",
+                botTag: "Bot Locked: Queen's Gambit (1.d4 d5 2.c4)",
+                tree: {
+                    "d4": ["d5"],
+                    "d4 d5 c4": ["e6", "c6", "dxc4"],
+                    "d4 d5 c4 e6": ["Nc3", "Nf3"],
+                    "d4 d5 c4 e6 Nc3": ["Nf6", "c6"],
+                    "d4 d5 c4 e6 Nc3 Nf6": ["Bg5", "cxd5", "Nf3"],
+                    "d4 d5 c4 c6": ["Nf3", "Nc3"],
+                    "d4 d5 c4 c6 Nf3": ["Nf6"]
+                }
+            },
             sicilian: {
                 title: "⚪ White vs 🤖 Sicilian Defense",
                 userSide: "white",
-                goal: "Practice Open Sicilian (1.e4 c5 2.Nf3 & 3.d4) or Alapin (2.c3). Fight for central control with rapid knight and bishop development.",
-                botTag: "Bot Locked: Sicilian Defense",
+                expectedFirst: "e4",
+                goal: "Start with 1.e4. Black will play 1...c5 (Open Sicilian). Practice 2.Nf3 and 3.d4!",
+                botTag: "Bot Locked: Sicilian Defense (1.e4 c5)",
                 tree: {
-                    "": ["e4"],
                     "e4": ["c5"],
                     "e4 c5 Nf3": ["d6", "Nc6", "e6"],
                     "e4 c5 Nf3 d6 d4": ["cxd4"],
@@ -775,10 +787,10 @@
             french: {
                 title: "⚪ White vs 🤖 French Defense",
                 userSide: "white",
-                goal: "Practice Advance Variation (3.e5) or Classical (3.Nc3). Secure your central pawns and prevent Black from freeing their light bishop.",
-                botTag: "Bot Locked: French Defense",
+                expectedFirst: "e4",
+                goal: "Start with 1.e4. Black will play 1...e6 and 2...d5. Practice 3.e5 (Advance) or 3.Nc3 (Classical).",
+                botTag: "Bot Locked: French Defense (1.e4 e6)",
                 tree: {
-                    "": ["e4"],
                     "e4": ["e6"],
                     "e4 e6 d4": ["d5"],
                     "e4 e6 d4 d5 e5": ["c5"],
@@ -789,10 +801,10 @@
             caro: {
                 title: "⚪ White vs 🤖 Caro-Kann Defense",
                 userSide: "white",
-                goal: "Practice Advance Variation (3.e5) or Classical (3.Nc3). Gain space and control key central squares before Black consolidates.",
-                botTag: "Bot Locked: Caro-Kann",
+                expectedFirst: "e4",
+                goal: "Start with 1.e4. Black will play 1...c6 and 2...d5. Gain central space with 3.e5 or 3.Nc3.",
+                botTag: "Bot Locked: Caro-Kann (1.e4 c6)",
                 tree: {
-                    "": ["e4"],
                     "e4": ["c6"],
                     "e4 c6 d4": ["d5"],
                     "e4 c6 d4 d5 e5": ["Bf5"],
@@ -803,11 +815,12 @@
             scandi_black: {
                 title: "⚫ Black vs 🤖 Scandinavian 2.e5",
                 userSide: "black",
-                goal: "When PC pushes 2.e5, play 2...Bf5! outside the pawn chain. Then play 3...e6, 4...c5! and 5...Nc6 with an active, winning setup.",
+                expectedFirst: "d5",
+                goal: "When PC plays 1.e4, reply 1...d5. When PC pushes 2.e5, play 2...Bf5! outside the pawn chain.",
                 botTag: "Bot Locked: Scandi 2.e5",
                 tree: {
                     "": ["e4"],
-                    "e4 d5": ["e5", "exd5"],
+                    "e4 d5": ["e5"],
                     "e4 d5 e5 Bf5": ["d4", "Nf3"],
                     "e4 d5 e5 Bf5 d4 e6": ["Nf3", "Bd3"],
                     "e4 d5 e5 Bf5 d4 e6 Nf3 c5": ["c3", "Be2"]
@@ -816,7 +829,8 @@
             london_black: {
                 title: "⚫ Black vs 🤖 London System",
                 userSide: "black",
-                goal: "When PC plays London 2.Bf4, strike immediately with 2...c5! and follow up with 3...Nc6 & 4...Qb6! attacking the unguarded b2 pawn.",
+                expectedFirst: "d5",
+                goal: "When PC plays 1.d4, play 1...d5. When PC plays 2.Bf4, strike immediately with 2...c5! and 4...Qb6!",
                 botTag: "Bot Locked: London System",
                 tree: {
                     "": ["d4"],
@@ -829,7 +843,8 @@
             danish_black: {
                 title: "⚫ Black vs 🤖 Danish Gambit",
                 userSide: "black",
-                goal: "When PC plays the Danish Gambit (1.e4 e5 2.d4 exd4 3.c3), take the pawns and play 5...d5!! (Schlechter Defense) to shut down White's bishops.",
+                expectedFirst: "e5",
+                goal: "When PC plays 1.e4 e5 2.d4 exd4 3.c3, accept the gambit and play 5...d5!! (Schlechter Defense).",
                 botTag: "Bot Locked: Danish Gambit",
                 tree: {
                     "": ["e4"],
@@ -843,7 +858,8 @@
             reti_black: {
                 title: "⚫ Black vs 🤖 Reti Opening",
                 userSide: "black",
-                goal: "When PC plays 1.Nf3 d5 2.c4, push 2...d4! seizing space and stopping Nc3. Follow with 3...c5 and 4...Nc6.",
+                expectedFirst: "d5",
+                goal: "When PC plays 1.Nf3, play 1...d5. When PC plays 2.c4, push 2...d4! seizing space.",
                 botTag: "Bot Locked: Reti Opening",
                 tree: {
                     "": ["Nf3"],
@@ -852,6 +868,20 @@
                     "Nf3 d5 c4 d4 e3 c5": ["exd4", "b4"]
                 }
             }
+        };
+
+        // Master Global Opening Dictionary (No More Random Moves!)
+        const globalMasterReplies = {
+            "d4": ["d5", "Nf6"],
+            "e4": ["e5", "c5", "e6", "c6", "d5"],
+            "Nf3": ["d5", "Nf6"],
+            "c4": ["e5", "c5", "Nf6"],
+            "d4 d5": ["c4", "Nf3", "Bf4"],
+            "d4 Nf6": ["c4", "Nf3", "Bg5"],
+            "e4 e5": ["Nf3", "Bc4", "Nc3"],
+            "e4 c5": ["Nf3", "Nc3", "c3"],
+            "e4 e6": ["d4", "d3"],
+            "e4 c6": ["d4", "d3"]
         };
 
         let sparringBoard = null;
@@ -884,8 +914,11 @@
             updateSparringStatus();
             updateSparringMovesUI();
 
-            // If PC moves first (when user plays Black)
-            if (currentSparringRep.userSide === "black") {
+            document.getElementById('sparring-feedback-title').innerText = "Make your opening move!";
+            if (currentSparringRep.userSide === "white") {
+                document.getElementById('sparring-feedback-sub').innerText = `Start with 1.${currentSparringRep.expectedFirst} to begin the ${currentSparringRep.title} drill.`;
+            } else {
+                document.getElementById('sparring-feedback-sub').innerText = "PC is playing White. Waiting for opening move...";
                 setTimeout(makeBotMove, 400);
             }
         }
@@ -895,11 +928,9 @@
         }
 
         function onSparringDrop(source, target) {
-            // Check turn
             const turn = sparringGame.turn() === 'w' ? 'white' : 'black';
             if (turn !== currentSparringRep.userSide) return 'snapback';
 
-            // See if the move is legal
             const move = sparringGame.move({
                 from: source,
                 to: target,
@@ -912,26 +943,88 @@
             updateSparringMovesUI();
             updateSparringStatus();
 
-            // Check if game over
             if (sparringGame.game_over()) {
                 handleSparringGameOver();
                 return;
             }
 
-            // Trigger PC Response
-            setTimeout(makeBotMove, 350);
+            setTimeout(makeBotMove, 300);
+        }
+
+        function getSmartFallbackMove() {
+            const hist = getMovesHistorySAN();
+            
+            // Check global master table first
+            if (globalMasterReplies[hist]) {
+                const candidates = globalMasterReplies[hist];
+                for (let cand of candidates) {
+                    if (sparringGame.moves().includes(cand)) {
+                        return cand;
+                    }
+                }
+            }
+
+            // Sensible positional development fallback (NO random Na6!)
+            const legal = sparringGame.moves({ verbose: true });
+            
+            // Priority 1: Captures of pieces / pawns
+            const captures = legal.filter(m => m.captured);
+            if (captures.length > 0) {
+                return captures[0].san;
+            }
+
+            // Priority 2: Central pawn moves (d5, e5, c5, d4, e4, c4)
+            const centralPawns = legal.filter(m => m.piece === 'p' && ['d5','e5','c5','d4','e4','c4'].includes(m.to));
+            if (centralPawns.length > 0) {
+                return centralPawns[0].san;
+            }
+
+            // Priority 3: Developing Knights & Bishops to center
+            const devMoves = legal.filter(m => ['n','b'].includes(m.piece) && ['f6','c6','f3','c3','e7','d7','e2','d2','b4','g4','c4','f4'].includes(m.to));
+            if (devMoves.length > 0) {
+                return devMoves[0].san;
+            }
+
+            // Priority 4: Castling
+            const castle = legal.filter(m => m.san === 'O-O' || m.san === 'O-O-O');
+            if (castle.length > 0) {
+                return castle[0].san;
+            }
+
+            return legal[0].san;
         }
 
         function makeBotMove() {
             if (sparringGame.game_over()) return;
 
             const hist = getMovesHistorySAN();
+            const movesCount = sparringGame.history().length;
             const candidates = currentSparringRep.tree[hist];
 
             let chosenMove = null;
+            let isBook = false;
+
             if (candidates && candidates.length > 0) {
-                // Pick random variation from opening tree
                 chosenMove = candidates[Math.floor(Math.random() * candidates.length)];
+                isBook = true;
+            }
+
+            // Check if user played unexpected 1st move in White practice
+            if (!isBook && movesCount === 1 && currentSparringRep.userSide === "white") {
+                const userMove = sparringGame.history()[0];
+                if (userMove !== currentSparringRep.expectedFirst) {
+                    chosenMove = getSmartFallbackMove();
+                    const res = sparringGame.move(chosenMove);
+                    if (res) {
+                        sparringBoard.position(sparringGame.fen());
+                        updateSparringMovesUI();
+                        updateSparringStatus();
+                        document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-amber-400 font-bold">⚠️ Opening Notice: You played 1.${userMove}</span>`;
+                        document.getElementById('sparring-feedback-sub').innerText = `To practice ${currentSparringRep.title}, start with 1.${currentSparringRep.expectedFirst}. (Bot responded with standard 1...${res.san}).`;
+                        document.getElementById('sparring-eval-badge').innerText = "Transposition / Sideline";
+                        return;
+                    }
+                }
             }
 
             if (chosenMove) {
@@ -947,22 +1040,20 @@
                 }
             }
 
-            // Out of book tree: pick a standard legal move or random best move
-            const legalMoves = sparringGame.moves();
-            if (legalMoves.length > 0) {
-                const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
-                sparringGame.move(randomMove);
-                sparringBoard.position(sparringGame.fen());
-                updateSparringMovesUI();
-                updateSparringStatus();
-                document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-sky-300 font-bold">⚡ Out of Book: ${randomMove}</span>`;
-                document.getElementById('sparring-feedback-sub').innerText = "You have navigated past the initial opening book! Keep developing your pieces.";
-            }
+            // High-quality smart fallback (No random blunders)
+            const smartMove = getSmartFallbackMove();
+            sparringGame.move(smartMove);
+            sparringBoard.position(sparringGame.fen());
+            updateSparringMovesUI();
+            updateSparringStatus();
+            document.getElementById('sparring-feedback-title').innerHTML = `<span class="text-sky-300 font-bold">⚡ Out of Book: ${smartMove}</span>`;
+            document.getElementById('sparring-feedback-sub').innerText = "You have navigated past the initial opening book! Keep developing your pieces.";
+            document.getElementById('sparring-eval-badge').innerText = "Playable Position";
         }
 
         function undoSparringMove() {
-            sparringGame.undo(); // Undo Bot
-            sparringGame.undo(); // Undo User
+            sparringGame.undo();
+            sparringGame.undo();
             sparringBoard.position(sparringGame.fen());
             clearSparringArrows();
             updateSparringMovesUI();
