@@ -25,6 +25,12 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chess Diagnostics: Opening Weaknesses & Blunders - __USERNAME__</title>
+    <!-- PWA & Mobile App Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/wN.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chessboard.js & jQuery & Chess.js -->
@@ -1477,6 +1483,9 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
         }
 
         $(document).ready(function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').catch(function() {});
+            }
             initWeaknessView();
             initReplayer();
             initSparring();
@@ -1499,5 +1508,12 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_rendered)
+
+    # Also save as index.html for instant GitHub Pages / PWA root access
+    index_path = os.path.join(os.path.dirname(output_path), "index.html")
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(html_rendered)
+
     print(f"Generated interactive dashboard with separated Opening Weaknesses & Blunders: {output_path}")
+    print(f"Generated PWA & GitHub Pages entry: {index_path}")
     return output_path
