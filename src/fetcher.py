@@ -56,30 +56,27 @@ def fetch_all_games(username, data_dir="data", force_refresh=False):
     archive_urls = archives_data.get("archives", [])
     print(f"Found {len(archive_urls)} monthly archives on Chess.com.")
     
-    new_games = []
-    # Always re-check the latest month because it may have new games
-    latest_archive = archive_urls[-1] if archive_urls else None
+    recent_archives = set(archive_urls[-2:]) if len(archive_urls) >= 2 else set(archive_urls)
+    existing_games_map = {g.get("url"): g for g in cached_games if g.get("url")}
+    new_games_count = 0
     
     for url in archive_urls:
-        if not force_refresh and url in cached_archives and url != latest_archive:
+        if not force_refresh and url in cached_archives and url not in recent_archives:
             continue
             
         print(f"Fetching: {url} ...")
         month_data = fetch_json(url)
         if month_data and "games" in month_data:
-            month_games = month_data["games"]
-            if url == latest_archive and cached_games:
-                # Deduplicate against existing games by URL
-                existing_urls = {g.get("url") for g in cached_games}
-                for g in month_games:
-                    if g.get("url") not in existing_urls:
-                        new_games.append(g)
-            else:
-                new_games.extend(month_games)
+            for g in month_data["games"]:
+                g_url = g.get("url")
+                if g_url:
+                    if g_url not in existing_games_map:
+                        new_games_count += 1
+                    existing_games_map[g_url] = g
             cached_archives.add(url)
             
-    all_games = cached_games + new_games
-    print(f"Total games ready for analysis: {len(all_games)} (New: {len(new_games)})")
+    all_games = list(existing_games_map.values())
+    print(f"Total games ready for analysis: {len(all_games)} (New: {new_games_count})")
     
     # Save cache
     os.makedirs(data_dir, exist_ok=True)

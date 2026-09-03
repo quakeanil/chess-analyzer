@@ -6,6 +6,7 @@ import json
 from collections import defaultdict, Counter
 import chess
 import chess.pgn
+import chess.engine
 from src.engine_analyzer import find_stockfish, analyze_game_with_stockfish
 
 def generate_opening_weaknesses_catalog():
@@ -271,9 +272,14 @@ def analyze_player_games(username, games_data):
     # Run Deep Stockfish Analysis across all selected losses
     engine_path = find_stockfish()
     if engine_path:
-        print(f"[Stockfish Engine] Analyzing {len(selected_losses)} lost games (Opening, Middlegame & Endgame) at depth 12 with {engine_path}...")
-        for idx, g_sum in enumerate(selected_losses):
-            analyze_game_with_stockfish(g_sum, engine_path, depth=12)
+        print(f"[Stockfish Engine] Analyzing {len(selected_losses)} lost games (Opening, Middlegame & Endgame) at depth 10 with {engine_path}...")
+        try:
+            engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+            for idx, g_sum in enumerate(selected_losses):
+                analyze_game_with_stockfish(g_sum, engine, depth=10)
+            engine.quit()
+        except Exception as e:
+            print(f"Stockfish engine analysis error: {e}")
 
     opening_weaknesses = generate_opening_weaknesses_catalog()
 

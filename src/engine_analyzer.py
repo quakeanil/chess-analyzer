@@ -58,14 +58,21 @@ def score_to_cp(score_obj, is_white_perspective=True):
         return 10000 if score.mate() > 0 else -10000
     return score.score() or 0
 
-def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
-    if not engine_path or not os.path.exists(engine_path):
+def analyze_game_with_stockfish(game_summary, engine_or_path, depth=10):
+    if not engine_or_path:
         return game_summary
 
-    try:
-        engine = chess.engine.SimpleEngine.popen_uci(engine_path)
-    except Exception as e:
-        print(f"Failed to start Stockfish: {e}")
+    close_when_done = False
+    if isinstance(engine_or_path, chess.engine.SimpleEngine):
+        engine = engine_or_path
+    elif isinstance(engine_or_path, str) and os.path.exists(engine_or_path):
+        try:
+            engine = chess.engine.SimpleEngine.popen_uci(engine_or_path)
+            close_when_done = True
+        except Exception as e:
+            print(f"Failed to start Stockfish: {e}")
+            return game_summary
+    else:
         return game_summary
 
     board = chess.Board()
@@ -75,8 +82,11 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
 
     analysis_per_ply = []
     
-    start_info = engine.analyse(board, chess.engine.Limit(depth=depth))
-    prev_score = start_info.get("score")
+    try:
+        cur_info = engine.analyse(board, chess.engine.Limit(depth=depth))
+    except Exception:
+        cur_info = {}
+    cur_score = cur_info.get("score")
     
     for i, san_move in enumerate(moves_san):
         is_my_move = (i % 2 == 0 if is_my_turn_first else i % 2 == 1)
@@ -84,22 +94,18 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
         
         best_move_obj = None
         pv_san_list = []
-        try:
-            info_before = engine.analyse(board, chess.engine.Limit(depth=depth))
-            if "pv" in info_before and len(info_before["pv"]) > 0:
-                best_move_obj = info_before["pv"][0]
-                temp_board = board.copy()
-                for pv_m in info_before["pv"][:5]:
-                    pv_san_list.append(temp_board.san(pv_m))
-                    temp_board.push(pv_m)
-        except Exception:
-            pass
+        if "pv" in cur_info and len(cur_info["pv"]) > 0:
+            best_move_obj = cur_info["pv"][0]
+            temp_board = board.copy()
+            for pv_m in cur_info["pv"][:5]:
+                pv_san_list.append(temp_board.san(pv_m))
+                temp_board.push(pv_m)
 
         best_move_san = board.san(best_move_obj) if best_move_obj else san_move
         best_uci = best_move_obj.uci() if best_move_obj else None
         
-        eval_before_str = score_to_str(prev_score, is_white_perspective=True)
-        eval_before_cp = score_to_cp(prev_score, is_white_perspective=(i % 2 == 0))
+        eval_before_str = score_to_str(cur_score, is_white_perspective=True)
+        eval_before_cp = score_to_cp(cur_score, is_white_perspective=(i % 2 == 0))
 
         try:
             actual_move_obj = board.parse_san(san_move)
@@ -109,11 +115,10 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
             break
 
         try:
-            info_after = engine.analyse(board, chess.engine.Limit(depth=depth))
-            cur_score = info_after.get("score")
+            cur_info = engine.analyse(board, chess.engine.Limit(depth=depth))
+            cur_score = cur_info.get("score")
             eval_after_str = score_to_str(cur_score, is_white_perspective=True)
             eval_after_cp = score_to_cp(cur_score, is_white_perspective=(i % 2 == 0))
-            prev_score = cur_score
         except Exception:
             eval_after_str = eval_before_str
             eval_after_cp = eval_before_cp
@@ -151,10 +156,11 @@ def analyze_game_with_stockfish(game_summary, engine_path, depth=12):
             "pv_san": " ".join(pv_san_list)
         })
 
-    try:
-        engine.quit()
-    except Exception:
-        pass
+    if close_when_done:
+        try:
+            engine.quit()
+        except Exception:
+            pass
 
     game_summary["stockfish_analysis"] = analysis_per_ply
     return game_summary

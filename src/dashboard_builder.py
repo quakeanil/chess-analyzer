@@ -81,6 +81,8 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
     <div class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 sm:px-6">
         <nav class="flex space-x-4 sm:space-x-8 text-xs sm:text-sm overflow-x-auto">
             <button onclick="switchTab('sparring')" id="tab-sparring" class="tab-btn active py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚔️ Sparring Bot & "What If?"</button>
+            <a href="/mentor" target="_blank" class="py-2 px-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 font-bold transition whitespace-nowrap flex items-center gap-1 my-1.5 text-xs">🎓 Live Scandi Mentor</a>
+            <a href="http://localhost:5173" target="_blank" class="py-2 px-2.5 bg-purple-500/10 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 font-bold transition whitespace-nowrap flex items-center gap-1 my-1.5 text-xs">♟️ Web-Chess Studio</a>
             <button onclick="switchTab('weaknesses')" id="tab-weaknesses" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">🛡️ Opening Weaknesses & Refutations</button>
             <button onclick="switchTab('blunders')" id="tab-blunders" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">⚡ Tactical Blunders & Lost Games (90+)</button>
             <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn py-3 px-1 text-slate-300 hover:text-white transition whitespace-nowrap">📊 Top 10 Win/Loss Openings</button>
@@ -157,7 +159,10 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                                 <option value="caro">⚪ White vs 🤖 Caro-Kann Defense (1.e4 c6)</option>
                             </optgroup>
                             <optgroup label="⚫ Practice As Black (PC Plays As White):">
-                                <option value="scandi_black">⚫ Black vs 🤖 Scandinavian 2.e5 (Drill 2...Bf5!)</option>
+                                <option value="scandi_qa5">👑 ⚫ Black Scandinavian: 3...Qa5 Classical Mainline</option>
+                                <option value="scandi_qd6">🛡️ ⚫ Black Scandinavian: 3...Qd6 Tiviakov / Carlsen</option>
+                                <option value="scandi_modern">🗡️ ⚫ Black Scandinavian: 2...Nf6 & Portuguese Gambit</option>
+                                <option value="scandi_black">⛔ ⚫ Black vs 🤖 Scandinavian 2.e5 (Drill 2...Bf5!)</option>
                                 <option value="london_black">⚫ Black vs 🤖 London System (Drill 2...c5! & 4...Qb6!)</option>
                                 <option value="danish_black">⚫ Black vs 🤖 Danish Gambit (Drill 5...d5!!)</option>
                                 <option value="reti_black">⚫ Black vs 🤖 Reti Opening (Drill 2...d4!)</option>
@@ -893,6 +898,40 @@ def generate_html_dashboard(analysis_data, user_stats, output_path="dashboard.ht
                 botTag: "Bot: Caro-Kann",
                 whatifs: [
                     { label: "▶ Advance (3.e5 Bf5)", seq: ["e4", "c6", "d4", "d5", "e5", "Bf5", "Nf3", "e6"] }
+                ]
+            },
+            scandi_qa5: {
+                title: "👑 Black Scandinavian 3...Qa5 Classical Mainline",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "e4",
+                botTag: "Bot Plays 1.e4 2.exd5 3.Nc3",
+                whatifs: [
+                    { label: "▶ Mainline 5...c6 & 6...Bf5!", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5", "d4", "Nf6", "Nf3", "c6", "Bc4", "Bf5"] },
+                    { label: "▶ White plays 7.Bd2 (7...e6! Fortress)", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5", "d4", "Nf6", "Nf3", "c6", "Bc4", "Bf5", "Bd2", "e6"] },
+                    { label: "▶ White 4.b4?! (Punish Gambit)", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5", "b4", "Qxb4", "Rb1", "Qd6"] }
+                ]
+            },
+            scandi_qd6: {
+                title: "🛡️ Black Scandinavian 3...Qd6 Tiviakov / Carlsen",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "e4",
+                botTag: "Bot Plays 1.e4 2.exd5 3.Nc3",
+                whatifs: [
+                    { label: "▶ 5...a6 & 6...Bg4! (Carlsen System)", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qd6", "d4", "Nf6", "Nf3", "a6", "g3", "Bg4"] },
+                    { label: "▶ Long Castling 8...O-O-O Battery", seq: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qd6", "d4", "Nf6", "Nf3", "a6", "g3", "Bg4", "Bg2", "Nc6", "O-O", "O-O-O"] }
+                ]
+            },
+            scandi_modern: {
+                title: "🗡️ Black Scandinavian 2...Nf6 & Portuguese Gambit",
+                userSide: "black",
+                expectedFirst: "d5",
+                botStartMove: "e4",
+                botTag: "Bot Plays 1.e4 & 2.exd5",
+                whatifs: [
+                    { label: "▶ 3...Bg4! Portuguese Attack", seq: ["e4", "d5", "exd5", "Nf6", "d4", "Bg4", "f3", "Bf5", "c4", "e6", "dxe6", "Nc6"] },
+                    { label: "▶ 3...Nxd5 Mainline Modern", seq: ["e4", "d5", "exd5", "Nf6", "d4", "Nxd5", "Nf3", "g6", "Be2", "Bg7"] }
                 ]
             },
             scandi_black: {

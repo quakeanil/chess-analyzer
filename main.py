@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.fetcher import fetch_all_games, fetch_user_stats
 from src.analyzer import analyze_player_games
+from src.top_openings import generate_top_openings
 from src.dashboard_builder import generate_html_dashboard
 
 def run_diagnostic(username="0kanil", force_refresh=False, open_browser=True):
@@ -53,7 +54,11 @@ def run_diagnostic(username="0kanil", force_refresh=False, open_browser=True):
     print(f"      Wins: {analysis_results['total_wins']} | Losses: {analysis_results['total_losses']} | Draws: {analysis_results['total_draws']}")
     print(f"      Early Disasters (<= 15 moves): {analysis_results['early_disasters_count']} games")
 
-    # 4. Generate Dashboard
+    # 4. Update Top Openings Matrix
+    top_openings_path = os.path.join(data_dir, "top_openings.json")
+    generate_top_openings(games, username=username, output_path=top_openings_path)
+
+    # 5. Generate Dashboard
     print("\n[4/4] Generating Interactive HTML Dashboard...")
     dashboard_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
     generate_html_dashboard(analysis_results, stats, output_path=dashboard_path)
